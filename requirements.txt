@@ -6,3 +6,4 @@ python-dotenv
 websockets
 pydantic
 passlib[bcrypt]
+sendgrid
