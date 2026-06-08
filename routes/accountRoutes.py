@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from database.connection import SessionLocal
@@ -52,7 +54,7 @@ async def register(data: PlayerCreate, db: Session = Depends(get_db)):
     <p>Vous pouvez maintenant vous connecter et commencer à jouer !</p>
     """
 
-    await send_confirmation_email(data.email, subject, content)
+    asyncio.create_task(send_confirmation_email(data.email, subject, content))
 
     return {"message": "Compte créé ! Un email de confirmation a été envoyé."}
 
