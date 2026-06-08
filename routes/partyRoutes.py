@@ -1,0 +1,1479 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from pydantic import BaseModel
+from database.connection import get_db, SessionLocal
+from models.playerModel import Player
+from models.partyModel import Party
+from utils.generatePartyCode import generate_party_code
+from routes.meetingRoutes import start_meeting
+from websocket_manager import notify_party_start, broadcast
+
+from datetime import datetime
+import random
+import asyncio
+import json
+
+router = APIRouter(prefix="/party", tags=["Party"])
+
+ALL_ROLES = [
+    {
+        "name": "Fabien", "title": "Manager Toxique", "team": "Managers", "image": "fabien.png",
+        "description": "Il micro-manage tout le monde en parlant de 'quick wins' et de 'croissance organique'. Quand il te félicite pour ton potentiel, tu sais que c'est ton potentiel de départ.",
+        "role_meeting": "Pendant le meeting, tous les Managers ouvrent les yeux, se concertent et désignent secrètement un collaborateur à licencier.",
+        "cliches": ["On priorise les quick wins !", "Il faut rester agile !", "Réalignons les ressources stratégiques.", "C'est dans notre roadmap.", "On est en mode pivot."]
+    },
+    {
+        "name": "Claire", "title": "Responsable RH", "team": "Collaborateurs", "image": "claire.png",
+        "description": "Elle ADOOOOOOOORE l'humain mais c'est la reine des hypocrites. Quand elle dit 'On est là pour t'accompagner', ta lettre de licenciement est déjà prête.",
+        "role_meeting": "Tu peux sauver la victime des Managers ou en désigner une autre. Tu ne peux utiliser ce pouvoir qu'UNE seule fois dans toute la partie.",
+        "cliches": ["On va co-construire ensemble !", "Empower Human to bridge the gap.", "Je suis là pour toi.", "On a une politique de bienveillance.", "Le sondage anonyme était vraiment anonyme."]
+    },
+    {
+        "name": "La Plante", "title": "Plante Verte", "team": "Collaborateurs", "image": "plante.png",
+        "description": "Belle et verdoyante de prime abord, elle survit au café froid, à la clim glaciale et à deux mois d'abandon. Une vraie warrior du bureau.",
+        "role_meeting": "Tu désignes un joueur qui devra t'arroser à chaque tour. Si ton arroseur est licencié, tu en choisis un nouveau au tour suivant.",
+        "cliches": ["*pousse silencieusement*", "Je suis le seul être vivant ici qui ne se plaint pas.", "Arrosez-moi, c'est tout ce que je demande.", "Je survis à tout, même à vous.", "Un peu d'eau et je suis au top."]
+    },
+    {
+        "name": "Benjamin", "title": "Consultant", "team": "Collaborateurs", "image": "benjamin.png",
+        "description": "Champion de la consommation de café, il parle en franglais et personne ne comprend ce qu'il fait. Il a fait un MOOC à Harvard pour booster son CV et duper les RH.",
+        "role_meeting": "Lorsque le CHO t'appelle, tu ronfles très fort puis tu te rendors. C'est tout.",
+        "cliches": ["Il faut créer des synergies !", "J'ai benchmarké la situation.", "Let's circle back on that.", "On est en train de disrupter le marché.", "J'ai fait un MOOC à Harvard sur ça."]
+    },
+    {
+        "name": "Pascal", "title": "Futur Retraité", "team": "Collaborateurs", "image": "pascal.png",
+        "description": "Il part à la retraite dans 2 ans et il est invirable. Il a fait toute sa carrière chez Corpo! et une chose est sûre : 'c'était mieux avant'.",
+        "role_meeting": "Tu désignes un joueur. Le CHO t'indique si c'est un Manager ou non. Si c'est un Manager, tu peux en désigner un second (2 max par tour).",
+        "cliches": ["C'était mieux avant.", "Moi j'ai connu l'époque où...", "Plus que 2 ans et je suis libre !", "De mon temps on faisait pas ça.", "J'ai vu des DG partir, j'en verrai d'autres."]
+    },
+    {
+        "name": "Tiff", "title": "Responsable Marketing", "team": "Collaborateurs", "image": "tiff.png",
+        "description": "Elle parle de TikTok et Instagram mais ses idées finissent en posts LinkedIn gênants. 10 secondes après son post, tu reçois : 'Hello, tu peux liker stp ? :-)'",
+        "role_meeting": "Tu choisis 3 mots parmi 5 proposés. Si quelqu'un prononce ces mots dans le chat du feedback, il est licencié !",
+        "cliches": ["Tu peux liker mon post stp ? :-)", "On va faire un contenu viral !", "J'ai une idée disruptive pour les réseaux.", "Le reach organique c'est mort.", "On fait du storytelling authentique."]
+    },
+    {
+        "name": "Stéphane", "title": "Commercial", "team": "Collaborateurs", "image": "stephane.png",
+        "description": "Toujours avec sa sacoche, il ne parle que de 'closer des deals'. Il improvise tout mais fait semblant de tout maîtriser.",
+        "role_meeting": "Tu désignes un joueur et vous révélez mutuellement vos identités. Attention : si tu tombes sur Claire la RH, tu es licencié !",
+        "cliches": ["On va closer ce deal !", "T'as mon numéro, appelle-moi.", "J'ai un afterwork ce soir, vous venez ?", "Mon variable cette année c'est du lourd.", "Je suis en mode chasseur."]
+    },
+    {
+        "name": "Cindy", "title": "Secrétaire", "team": "Collaborateurs", "image": "cindy.png",
+        "description": "Plus ancienne que ta dernière version Word. Elle t'envoie un mail 'Avec la pièce jointe c'est mieux :-)))'. Toujours sans la pièce jointe.",
+        "role_meeting": "Le CHO t'indique si l'un de tes voisins gauche/droite est Manager (sans dire lequel). Tu peux utiliser cette info pour orienter les votes.",
+        "cliches": ["Comme convenu, voici la pièce jointe.", "J'ai booké la salle de réunion !", "Tu peux valider mon compte-rendu stp ?", "J'ai transféré ton mail au bon service.", "Des fois je suis un peu fofolle !"]
+    },
+    {
+        "name": "Denis", "title": "Comptable", "team": "Collaborateurs", "image": "denis.png",
+        "description": "Discret, poli, avec un sourire énigmatique qui cache peut-être un million détourné. Il maîtrise tous les raccourcis Excel et verrouille tous ses dossiers.",
+        "role_meeting": "Tu peux échanger ton identité avec un autre joueur. Vous découvrez vos nouveaux rôles en secret.",
+        "cliches": ["C'est dans le budget.", "J'ai verrouillé le fichier Excel.", "Les chiffres ne mentent pas.", "Il y a des ajustements à prévoir.", "Toujours plus de CA, moins de croissance."]
+    },
+    {
+        "name": "Corentin", "title": "Stagiaire", "team": "Collaborateurs", "image": "corentin.png",
+        "description": "Plein d'énergie et d'optimisme naïf, il veut 'disrupter le modèle'. Il part en dernier le vendredi dans l'espoir de décrocher un CDI.",
+        "role_meeting": "Tu peux prendre le rôle d'un joueur éliminé et réincarner son personnage au tour suivant.",
+        "cliches": ["Je suis en mode exploratoire !", "Vous pensez qu'il y a un CDI possible ?", "J'ai pris des notes dans mon carnet Corpo!", "Je suis motivé à 200% !", "C'est exactement ce que je voulais faire."]
+    },
+    {
+        "name": "Abdel", "title": "Support IT", "team": "Collaborateurs", "image": "abdel.png",
+        "description": "La colonne vertébrale invisible de l'entreprise. Il règle tout avec un calme olympien. Mais t'as ouvert un ticket avant de venir le voir ?",
+        "role_meeting": "À chaque meeting tu contamines secrètement un joueur avec un virus cyber. Quand tu es éliminé, tous les infectés sont licenciés instantanément !",
+        "cliches": ["T'as ouvert un ticket ?", "J'ai lancé la campagne anti-phishing.", "Redémarre et rappelle-moi.", "C'est pas dans mon scope.", "Les règles sont les règles."]
+    },
+]
+
+# Tous les mots Tiffany disponibles
+TIFF_MOTS_DISPONIBLES = [
+    "Burn-out", "Key Take Aways", "Bullet-point", "Autonomie",
+    "Red Flag", "Hello ça va ?", "Auto-portant", "Innovation",
+    "Bullshit", "Prend un post-it", "Hiring freeze", "Flexoffice",
+    "Disruptif", "Je prends un call", "Pause close ?", "Heure supp",
+    "Team Work", "Comme un lundi", "Y a pas de fit", "Cooptation",
+    "Reste Agile", "Leverager les KE", "Share ta prez", "Case-study",
+    "Anti-phishing", "Pivot stratégique", "Close le deal", "Réactivité",
+    "Récap la réu", "Je prends le lead", "Je suis fatigué", "Pain point",
+    "Secret Santa", "Vision long-terme", "Ticket restau", "Onboarding",
+    "T'as 2min ?", "Vision long-terme", "Team building", "Next steps",
+    "Transparence", "T'as lu mon mail ?", "Back to basics", "Brainstorm",
+    "Cash is king", "Objectif rentabilité", "Best practice", "Bon week ?",
+    "Sois curieux", "Revue des objectifs", "T'es sur mute", "Home office",
+    "Pinte ?", "Organise ton agenda", "Comme tu veux", "Laptop",
+    "OKR", "RSE", "Inputs", "Skills",
+    "8to8", "HAHA", "PnL", "Dispo ?",
+    "Je suis fauché", "Les croissants c'eeeest", "Pour le stagios", "SWOT",
+    "Full remote", "On se fait un point ?", "Allume ta cam", "Formation",
+    "Non obstant", "Culture d'entreprise", "Bienveillance", "Y a du tt ?",
+    "Vision 360°", "Feedback constructif", "Challengeant", "Créativité",
+    "Big picture", "Management toxique", "Congé maladie", "Synergies",
+    "Petit café ?", "Croissance organique", "Quel variable ?", "Inclusion",
+    "On va déj ?", "T'as posé ton aprem ?", "Draft tes idées", "Cash burn",
+    "Baby-foot ?", "Sauf erreur de ma part", "Sympa ton mug", "Collègues",
+    "Trop junior", "l'IA c'est gamechanger", "Manifestement", "Benchmark",
+    "Trop senior", "Plan de restructuration", "J'ai un meeting", "Incentivé",
+    "Opportunity", "Perspectives d'évolution", "Out-of-the-box", "Deep dive",
+    "La direction", "Rapport de performance", "Rupture co STPPP", "Afterwork",
+    "Updates", "Café vanille ou noisette ?", "T'as ton lunch ?", "Curiosité",
+    "Assertif", "Besoin d'aide sur des sujets ?", "Mobilité interne", "Trust-office",
+]
+
+# Types de défis :
+# "vote"    → la majorité décide (succès/échec)
+# "direct"  → effet immédiat sans vote
+# "duo"     → avec l'aide d'un autre joueur + vote
+# "collectif" → tout le monde joue + vote
+
+CORPO_CARDS = [
+
+    # ══════════════════════════════
+    # 15 DÉFIS INDIVIDUELS
+    # ══════════════════════════════
+
+    {
+        "id": 1, "type": "vote", "timer": 30, "duo": False,
+        "text": "En 30 secondes, pitche ton augmentation salariale.",
+        "instructions": "Convaincs la majorité que tu mérites une augmentation. Si la majorité valide → tu restes !",
+        "vote_label": "Mérite-t-il/elle une augmentation ?"
+    },
+    {
+        "id": 2, "type": "vote", "timer": 30, "duo": False,
+        "text": "En 30 secondes, donne 5 politiques RSE que tu mettrais en place chez Corpo!",
+        "instructions": "Sois convaincant(e) ! La majorité valide ou non.",
+        "vote_label": "Les propositions RSE sont-elles convaincantes ?"
+    },
+    {
+        "id": 3, "type": "vote", "timer": 30, "duo": False,
+        "text": "En 30 secondes, cite 10 mots franglais du monde de l'entreprise.",
+        "instructions": "Synergies, quick wins, roadmap... t'en as d'autres ? La majorité valide.",
+        "vote_label": "A-t-il/elle réussi les 10 mots franglais ?"
+    },
+    {
+        "id": 4, "type": "vote", "timer": 30, "duo": False,
+        "text": "Sais-tu ce que signifie 'assertif' ? En 30 secondes, donne une définition.",
+        "instructions": "C'est pas juste 'confiant en soi'... ou si ? La majorité valide.",
+        "vote_label": "La définition est-elle correcte ?"
+    },
+    {
+        "id": 5, "type": "vote", "timer": 30, "duo": False,
+        "text": "Tu arrives en retard au meeting. En 30 secondes, explique ta mésaventure.",
+        "instructions": "Trouve la meilleure excuse de l'histoire ! Si la majorité valide, tu restes.",
+        "vote_label": "L'excuse est-elle recevable ?"
+    },
+    {
+        "id": 6, "type": "vote", "timer": 30, "duo": False,
+        "text": "En 30 secondes, pitche un post LinkedIn inspirant pour recruter. N'oublie pas les #hashtags !",
+        "instructions": "Sois authentique, bienveillant et disruptif à la fois ! La majorité valide.",
+        "vote_label": "Ce post mérite-t-il des likes ?"
+    },
+    {
+        "id": 7, "type": "vote", "timer": 30, "duo": False,
+        "text": "Sais-tu réellement à quoi sert un Manager ? En 30 secondes, explique.",
+        "instructions": "Prends le temps de réfléchir... La majorité valide.",
+        "vote_label": "L'explication tient-elle la route ?"
+    },
+    {
+        "id": 8, "type": "vote", "timer": 30, "duo": False,
+        "text": "En 30 secondes, décris comment tu vas résoudre la panne d'imprimante.",
+        "instructions": "L'imprimante ne répond plus depuis 3 jours... Si la majorité valide, tu restes.",
+        "vote_label": "La solution est-elle crédible ?"
+    },
+    {
+        "id": 9, "type": "vote", "timer": 30, "duo": False,
+        "text": "En 30 secondes, fais un pitch de création de startup innovante.",
+        "instructions": "L'appli qui va changer le monde, c'est maintenant ! La majorité valide.",
+        "vote_label": "Cette startup mérite-t-elle un financement ?"
+    },
+    {
+        "id": 10, "type": "vote", "timer": 30, "duo": False,
+        "text": "Tu as mis une LV3 sur ton CV ? Parle pendant 30 secondes dans cette langue.",
+        "instructions": "Espéranto, mandarin, klingon... à toi ! La majorité valide.",
+        "vote_label": "La performance linguistique est-elle convaincante ?"
+    },
+    {
+        "id": 11, "type": "vote", "timer": 30, "duo": False,
+        "text": "En 30 secondes, fais une imitation d'une réunion Teams typique qui commence mal.",
+        "instructions": "'T'es sur mute !' 'Je vous entends pas...' Go ! La majorité valide.",
+        "vote_label": "L'imitation est-elle réussie ?"
+    },
+    {
+        "id": 12, "type": "vote", "timer": 30, "duo": True,
+        "text": "En 30 secondes et à l'aide d'un joueur, avoue 10 choses que tu fais quand tu es en télétravail au lieu de travailler.",
+        "instructions": "Netflix, sieste, promenade du chien... À deux on va plus loin ! La majorité valide.",
+        "vote_label": "Ont-ils/elles réussi les 10 aveux ?"
+    },
+    {
+        "id": 13, "type": "vote", "timer": 30, "duo": False,
+        "text": "En 30 secondes, cite 2 citations inspirantes. Si tu réussis, tous les autres font 5 pompes !",
+        "instructions": "Nelson Mandela, Gandhi, ou LinkedIn ? La majorité valide.",
+        "vote_label": "Les citations sont-elles convaincantes ?"
+    },
+    {
+        "id": 14, "type": "direct_fail", "timer": None, "duo": False,
+        "text": "Tu n'as pas validé ta période d'essai. Tu es licencié instantanément !",
+        "instructions": "Pas de défi possible, c'est terminé !",
+        "vote_label": ""
+    },
+    {
+        "id": 15, "type": "direct_special", "special": "become_manager", "timer": None, "duo": False,
+        "text": "Promotion ! Félicitations, tu te transformes en Fabien et intègres l'équipe des Managers. Tout le monde connaît ta nouvelle identité.",
+        "instructions": "Bienvenue du côté obscur !",
+        "vote_label": ""
+    },
+
+    # ══════════════════════════════
+    # 10 DÉFIS COLLECTIFS
+    # ══════════════════════════════
+
+    {
+        "id": 16, "type": "collectif", "timer": None, "duo": False,
+        "text": "C'est l'afterwork ! À tour de rôle dans le chat, citez une marque de bière. Celui qui ne trouve plus est licencié.",
+        "instructions": "Dans le chat, écrivez votre marque à tour de rôle. Le CHO déclare le perdant.",
+        "vote_label": "", "collectif_mode": "tour_de_role"
+    },
+    {
+        "id": 17, "type": "collectif", "timer": None, "duo": False,
+        "text": "À tour de rôle, les joueurs citent un goût de capsule de café. Celui qui n'en trouve plus est licencié.",
+        "instructions": "Ristretto, Volluto, Capriccio... dans le chat ! Le CHO déclare le perdant.",
+        "vote_label": "", "collectif_mode": "tour_de_role"
+    },
+    {
+        "id": 18, "type": "collectif", "timer": None, "duo": False,
+        "text": "Chaque joueur dit combien de pauses clope il fait dans la journée. Celui qui en fait le plus est éliminé.",
+        "instructions": "Tout le monde répond dans le chat. Le CHO déclare le perdant.",
+        "vote_label": "", "collectif_mode": "sondage"
+    },
+    {
+        "id": 19, "type": "collectif", "timer": None, "duo": False,
+        "text": "Chaque joueur dit combien de fois il va aux toilettes par jour. Celui qui y va le plus est éliminé.",
+        "instructions": "Soyez honnêtes... dans le chat ! Le CHO déclare le perdant.",
+        "vote_label": "", "collectif_mode": "sondage"
+    },
+    {
+        "id": 20, "type": "collectif", "timer": 60, "duo": False,
+        "text": "Tout le monde se détend et doit tenir 1 minute en faisant la chaise. Les perdants sont licenciés.",
+        "instructions": "Dos au mur, cuisses parallèles au sol. Ceux qui lâchent avant 1 min sont licenciés. Le CHO déclare les perdants.",
+        "vote_label": "", "collectif_mode": "physique"
+    },
+    {
+        "id": 21, "type": "collectif", "timer": 30, "duo": False,
+        "text": "C'est la fin de l'afterwork, prenez l'ethylotest ! Pendant 30 secondes, passez tous une main sous la jambe et attrapez-vous le nez. Ceux qui lâchent sont licenciés.",
+        "instructions": "Tout le monde joue ! Le CHO déclare les perdants.",
+        "vote_label": "", "collectif_mode": "physique"
+    },
+    {
+        "id": 22, "type": "collectif", "timer": 120, "duo": False,
+        "text": "Toute l'entreprise est proche du burn-out. Fermez les yeux, détendez-vous 2 minutes. Ceux qui rigolent ou parlent sont licenciés.",
+        "instructions": "Silence total ! Le CHO surveille. Ceux qui craquent sont licenciés.",
+        "vote_label": "", "collectif_mode": "silence"
+    },
+    {
+        "id": 23, "type": "collectif", "timer": None, "duo": False,
+        "text": "Networking ou opportunisme ? Tout le monde annonce son nombre de connexions LinkedIn dans le chat. Celui qui en a le plus est licencié.",
+        "instructions": "Répondez dans le chat. Le CHO déclare le perdant.",
+        "vote_label": "", "collectif_mode": "sondage"
+    },
+    {
+        "id": 24, "type": "collectif", "timer": 30, "duo": True,
+        "text": "À l'aide d'un joueur, tu as 30 secondes pour citer 10 formes de pâtes différentes dans le chat.",
+        "instructions": "Penne, fusilli, tagliatelle... à deux dans le chat ! La majorité valide.",
+        "vote_label": "Ont-ils/elles réussi les 10 pâtes ?", "collectif_mode": "duo_chat"
+    },
+    {
+        "id": 25, "type": "collectif", "timer": None, "duo": False,
+        "text": "C'est l'afterwork, tout le monde cite une marque de voiture à tour de rôle dans le chat. Le perdant est licencié.",
+        "instructions": "Dans le chat, une marque chacun à tour de rôle. Celui qui répète ou ne trouve plus est licencié.",
+        "vote_label": "", "collectif_mode": "tour_de_role"
+    },
+]
+
+
+
+class CreatePartyRequest(BaseModel):
+    pseudo: str
+    is_private: bool = False
+
+class JoinPartyRequest(BaseModel):
+    pseudo: str
+    code: str
+
+class VoteRequest(BaseModel):
+    voter_id: int
+    target_id: int
+    party_code: str
+
+class DefiVoteRequest(BaseModel):
+    voter_id: int
+    party_code: str
+    success: bool  # True = réussi, False = échoué
+
+
+# ---------------------------------------------------------
+# CRÉATION DE PARTIE
+# ---------------------------------------------------------
+@router.post("/create")
+def create_party(request: CreatePartyRequest, db: Session = Depends(get_db)):
+    player = db.query(Player).filter(Player.pseudo == request.pseudo).first()
+    if not player:
+        raise HTTPException(404, "Pseudo introuvable")
+
+    player.party_id = None
+    db.commit()
+
+    code = generate_party_code()
+    party = Party(
+        code=code,
+        host_id=player.id,
+        is_private=request.is_private,
+        status="waiting",
+        last_activity=datetime.utcnow()
+    )
+    db.add(party)
+    db.commit()
+    db.refresh(party)
+
+    player.party_id = party.id
+    player.last_seen = datetime.utcnow()
+    db.commit()
+
+    return {
+        "message": "Partie créée",
+        "party_id": party.id,
+        "code": code,
+        "is_private": request.is_private,
+        "player_id": player.id
+    }
+
+
+# ---------------------------------------------------------
+# REJOINDRE UNE PARTIE
+# ---------------------------------------------------------
+@router.post("/join")
+def join_party(request: JoinPartyRequest, db: Session = Depends(get_db)):
+    player = db.query(Player).filter(Player.pseudo == request.pseudo).first()
+    if not player:
+        raise HTTPException(404, "Pseudo introuvable")
+
+    party = db.query(Party).filter(Party.code == request.code).first()
+    if not party:
+        raise HTTPException(404, "Code invalide")
+
+    if party.status != "waiting":
+        raise HTTPException(400, "Cette partie a déjà commencé")
+
+    player.party_id = party.id
+    player.last_seen = datetime.utcnow()
+    party.last_activity = datetime.utcnow()
+    db.commit()
+
+    return {
+        "message": "Joueur ajouté",
+        "party_id": party.id,
+        "code": party.code,
+        "player_id": player.id
+    }
+
+
+# ---------------------------------------------------------
+# QUITTER UNE PARTIE
+# ---------------------------------------------------------
+@router.post("/leave/{player_id}")
+def leave_party(player_id: int, db: Session = Depends(get_db)):
+    player = db.query(Player).filter(Player.id == player_id).first()
+    if not player:
+        raise HTTPException(404, "Joueur introuvable")
+    player.party_id = None
+    db.commit()
+    return {"message": "Tu as quitté la partie."}
+
+
+# ---------------------------------------------------------
+# INFOS PARTIE
+# ---------------------------------------------------------
+@router.get("/verify/{code}")
+def verify_party(code: str, db: Session = Depends(get_db)):
+    party = db.query(Party).filter(Party.code == code).first()
+    if not party:
+        raise HTTPException(404, "Partie introuvable")
+    return {
+        "party_id": party.id,
+        "code": party.code,
+        "is_private": party.is_private,
+        "host_id": party.host_id,
+        "status": party.status
+    }
+
+
+# ---------------------------------------------------------
+# LISTE DES JOUEURS
+# ---------------------------------------------------------
+@router.get("/players/{party_id}")
+def get_players(party_id: int, db: Session = Depends(get_db)):
+    players = db.query(Player).filter(Player.party_id == party_id).all()
+    return [{"id": p.id, "pseudo": p.pseudo, "role": p.role, "is_alive": p.is_alive} for p in players]
+
+
+# ---------------------------------------------------------
+# PARTIES PUBLIQUES
+# ---------------------------------------------------------
+@router.get("/public")
+def get_public_parties(db: Session = Depends(get_db)):
+    parties = db.query(Party).filter(
+        Party.is_private == False,
+        Party.status == "waiting"
+    ).all()
+    return [{"party_id": p.id, "code": p.code, "host_id": p.host_id} for p in parties]
+
+
+# ---------------------------------------------------------
+# RÔLE D'UN JOUEUR
+# ---------------------------------------------------------
+@router.get("/role/{player_id}")
+def get_role(player_id: int, db: Session = Depends(get_db)):
+    player = db.query(Player).filter(Player.id == player_id).first()
+    if not player:
+        raise HTTPException(404, "Joueur introuvable")
+    if not player.role:
+        raise HTTPException(400, "Rôle pas encore attribué")
+
+    role_info = next((r for r in ALL_ROLES if r["name"] == player.role), None)
+    if not role_info:
+        raise HTTPException(400, "Rôle inconnu")
+
+    return {
+        "pseudo": player.pseudo,
+        "role_name": player.role,
+        "role": role_info["title"],
+        "team": role_info["team"],
+        "image": role_info["image"]
+    }
+
+
+# ---------------------------------------------------------
+# HEARTBEAT
+# ---------------------------------------------------------
+@router.post("/heartbeat/{player_id}")
+def heartbeat(player_id: int, db: Session = Depends(get_db)):
+    player = db.query(Player).filter(Player.id == player_id).first()
+    if not player:
+        raise HTTPException(404, "Joueur introuvable")
+    player.last_seen = datetime.utcnow()
+    if player.party_id:
+        party = db.query(Party).filter(Party.id == player.party_id).first()
+        if party:
+            party.last_activity = datetime.utcnow()
+    db.commit()
+    return {"status": "ok"}
+
+
+# ---------------------------------------------------------
+# LANCER LA PARTIE
+# ---------------------------------------------------------
+@router.post("/start/{party_id}")
+async def start_party(party_id: int, db: Session = Depends(get_db)):
+    party = db.query(Party).filter(Party.id == party_id).first()
+    if not party:
+        raise HTTPException(404, "Partie introuvable")
+
+    players = db.query(Player).filter(Player.party_id == party_id).all()
+    nb = len(players)
+
+    if nb < 4:
+        raise HTTPException(400, "Il faut au moins 4 joueurs.")
+    if nb > len(ALL_ROLES):
+        raise HTTPException(400, f"Maximum {len(ALL_ROLES)} joueurs.")
+
+    if 4 <= nb <= 6:
+        nb_managers = 1
+    elif 7 <= nb <= 10:
+        nb_managers = 2
+    else:
+        nb_managers = 3
+
+    manager_roles = [r for r in ALL_ROLES if r["team"] == "Managers"]
+    collab_roles  = [r for r in ALL_ROLES if r["team"] == "Collaborateurs"]
+
+    chosen = random.sample(manager_roles, nb_managers) + random.sample(collab_roles, nb - nb_managers)
+    random.shuffle(chosen)
+
+    for player in players:
+        player.is_alive = True
+        player.has_used_power = False
+        player.has_drawn_corpocard = False
+        player.victim_of_managers = False
+        player.victim_of_claire = False
+        player.virus_from_abdel = False
+        player.revealed_to = None
+
+    for player, role in zip(players, chosen):
+        player.role = role["name"]
+        player.last_role = role["name"]
+        player.is_manager = (role["team"] == "Managers")
+
+    party.status = "in_progress"
+    party.meeting_number = 1
+    party.last_activity = datetime.utcnow()
+    db.commit()
+
+    party_code = party.code
+    await notify_party_start(party_code)
+
+    # Attendre que les joueurs voient leur rôle (15s sur decouverte_role.html)
+    await asyncio.sleep(18)
+
+    db_fresh = SessionLocal()
+    try:
+        print(f"🚀 Lancement du meeting pour {party_code}")
+        await start_meeting(party_code, db_fresh)
+    except Exception as e:
+        print(f"❌ Erreur start_meeting : {e}")
+    finally:
+        db_fresh.close()
+
+    return {"message": "Rôles attribués et meeting lancé"}
+
+
+# ---------------------------------------------------------
+# VOTE
+# ---------------------------------------------------------
+@router.post("/vote")
+async def submit_vote(request: VoteRequest, db: Session = Depends(get_db)):
+    party = db.query(Party).filter(Party.code == request.party_code).first()
+    if not party:
+        raise HTTPException(404, "Partie introuvable")
+
+    voter = db.query(Player).filter(Player.id == request.voter_id).first()
+    if not voter or not voter.is_alive:
+        raise HTTPException(400, "Joueur invalide ou éliminé")
+
+    target = db.query(Player).filter(Player.id == request.target_id).first()
+    if not target or not target.is_alive:
+        raise HTTPException(400, "Cible invalide")
+
+    voter.revealed_to = request.target_id
+    db.commit()
+
+    alive_players = db.query(Player).filter(
+        Player.party_id == party.id,
+        Player.is_alive == True
+    ).all()
+
+    voters_done = [p for p in alive_players if p.revealed_to is not None]
+
+    if len(voters_done) >= len(alive_players):
+        vote_counts = {}
+        for p in voters_done:
+            vote_counts[p.revealed_to] = vote_counts.get(p.revealed_to, 0) + 1
+
+        max_votes = max(vote_counts.values())
+        eliminated_ids = [pid for pid, v in vote_counts.items() if v == max_votes]
+
+        for p in alive_players:
+            p.revealed_to = None
+
+        print(f"📊 Éliminé(s) du vote : {eliminated_ids}")
+
+        if len(eliminated_ids) > 1:
+            print(f"⚖️ Égalité → {len(eliminated_ids)} joueurs concernés")
+            victims = [db.query(Player).filter(Player.id == eid).first() for eid in eliminated_ids]
+            victims = [v for v in victims if v]
+            is_everyone = len(eliminated_ids) >= len(alive_players)
+
+            if is_everyone:
+                # Tous les vivants restants sont à égalité → logique joker
+                no_joker  = [v for v in victims if not v.has_drawn_corpocard]
+                has_joker = [v for v in victims if v.has_drawn_corpocard]
+
+                if len(no_joker) == 0:
+                    # Tous ont déjà le joker → défis à tour de rôle
+                    names = [v.pseudo for v in victims]
+                    await broadcast(party.code, f"egalite_defis:{','.join(names)}")
+                    await asyncio.sleep(3)
+                    party.last_eliminated_id = victims[0].id
+                    party.turn_order   = json.dumps(eliminated_ids)
+                    party.current_turn = 0
+                    party.meeting_phase  = "vote_defi"
+                    party.defi_sub_phase = "running_from_vote"
+                    db.commit()
+                    await broadcast(party.code, "phase:defi_decision")
+
+                elif len(no_joker) == 1 and len(has_joker) >= 1:
+                    # Un sans joker → il est éliminé directement
+                    loser = no_joker[0]
+                    loser.is_alive = False
+                    db.commit()
+                    await broadcast(party.code, f"player_eliminated_direct:{loser.pseudo}:{loser.role}")
+                    await asyncio.sleep(3)
+                    alive2 = db.query(Player).filter(Player.party_id == party.id, Player.is_alive == True).all()
+                    if not [p for p in alive2 if p.is_manager]:
+                        await broadcast(party.code, "game_over:victoire_collabs")
+                        return {"message": "Victoire Collabs"}
+                    if not [p for p in alive2 if not p.is_manager]:
+                        await broadcast(party.code, "game_over:victoire_managers")
+                        return {"message": "Victoire Managers"}
+                    await _launch_next_meeting(party.code, party.id, db)
+
+                else:
+                    # Tous sans joker → match nul
+                    for v in victims:
+                        v.is_alive = False
+                    db.commit()
+                    await broadcast(party.code, "game_over:match_nul")
+
+                return {"message": "Égalité finale traitée"}
+
+            # Égalité classique → file de défis
+            names = [v.pseudo for v in victims]
+            await broadcast(party.code, f"egalite_defis:{','.join(names)}")
+            await asyncio.sleep(3)
+
+            first_victim = victims[0]
+            if first_victim.has_drawn_corpocard:
+                first_victim.is_alive = False
+                party.last_eliminated_id = first_victim.id
+                party.turn_order   = json.dumps(eliminated_ids)
+                party.current_turn = 0
+                party.meeting_phase  = "vote_defi"
+                party.defi_sub_phase = "running_from_vote"
+                db.commit()
+                await broadcast(party.code, f"player_eliminated_direct:{first_victim.pseudo}:{first_victim.role}")
+                await asyncio.sleep(3)
+                await _process_next_in_queue(party.code, party.id, 0, True)
+            else:
+                party.last_eliminated_id = first_victim.id
+                party.turn_order   = json.dumps(eliminated_ids)
+                party.current_turn = 0
+                party.meeting_phase  = "vote_defi"
+                party.defi_sub_phase = "running_from_vote"
+                db.commit()
+                await broadcast(party.code, "phase:defi_decision")
+
+
+        else:
+            # Un seul éliminé → vérifier le joker
+            first_target_id = eliminated_ids[0]
+            victim = db.query(Player).filter(Player.id == first_target_id).first()
+
+            if victim and victim.has_drawn_corpocard:
+                # Joker déjà utilisé → élimination directe
+                print(f"⛔ {victim.pseudo} a déjà utilisé son joker → élimination directe")
+                victim.is_alive = False
+                party.last_eliminated_id = victim.id
+                db.commit()
+
+                alive_after    = db.query(Player).filter(Player.party_id == party.id, Player.is_alive == True).all()
+                alive_managers = [p for p in alive_after if p.is_manager]
+                alive_collabs  = [p for p in alive_after if not p.is_manager]
+
+                if not alive_managers:
+                    await broadcast(party.code, "game_over:victoire_collabs")
+                    return {"message": "Victoire des Collaborateurs"}
+                if not alive_collabs:
+                    await broadcast(party.code, "game_over:victoire_managers")
+                    return {"message": "Victoire des Managers"}
+
+                await broadcast(party.code, f"player_eliminated_direct:{victim.pseudo}:{victim.role}")
+                await asyncio.sleep(5)
+                await _launch_next_meeting(party.code, party.id, db)
+            else:
+                # Joker disponible → proposer le défi
+                party.last_eliminated_id = first_target_id
+                party.turn_order         = json.dumps(eliminated_ids)
+                party.current_turn       = 0
+                party.meeting_phase      = "vote_defi"
+                party.defi_sub_phase     = "running_from_vote"
+                db.commit()
+                await broadcast(party.code, "phase:defi_decision")
+
+    return {"message": "Vote enregistré"}
+
+
+# ---------------------------------------------------------
+# RÉSULTAT DU VOTE
+# ---------------------------------------------------------
+@router.get("/vote_result/{code}")
+def get_vote_result(code: str, db: Session = Depends(get_db)):
+    party = db.query(Party).filter(Party.code == code).first()
+    if not party:
+        raise HTTPException(404, "Partie introuvable")
+
+    eliminated = None
+    if party.last_eliminated_id:
+        last_dead = db.query(Player).filter(Player.id == party.last_eliminated_id).first()
+        if last_dead:
+            role_info = next((r for r in ALL_ROLES if r["name"] == last_dead.role), {})
+            eliminated = {
+                "player_id": last_dead.id,
+                "pseudo": last_dead.pseudo,
+                "role": last_dead.role,
+                "team": role_info.get("team", "?"),
+                "image": role_info.get("image", "joueur1.png"),
+                "has_drawn_corpocard": last_dead.has_drawn_corpocard
+            }
+
+    all_players = db.query(Player).filter(Player.party_id == party.id).all()
+    alive = [p for p in all_players if p.is_alive]
+    alive_managers = [p for p in alive if p.is_manager]
+    alive_collabs  = [p for p in alive if not p.is_manager]
+
+    game_over = False
+    winner = None
+    if len(alive_managers) == 0:
+        game_over = True
+        winner = "Collaborateurs"
+    elif len(alive_collabs) == 0:
+        game_over = True
+        winner = "Managers"
+
+    return {
+        "eliminated": eliminated,
+        "game_over": game_over,
+        "winner": winner
+    }
+
+
+# ---------------------------------------------------------
+# VÉRIFIER SI UN JOUEUR EST VIVANT
+# ---------------------------------------------------------
+@router.get("/is_alive/{player_id}")
+def is_alive(player_id: int, db: Session = Depends(get_db)):
+    player = db.query(Player).filter(Player.id == player_id).first()
+    if not player:
+        raise HTTPException(404, "Joueur introuvable")
+    return {"is_alive": player.is_alive, "pseudo": player.pseudo}
+
+
+# ---------------------------------------------------------
+# RÉCUPÉRER LA CARTE CORPO ACTUELLE (défi en cours)
+# ---------------------------------------------------------
+@router.get("/current_corpocard/{code}")
+def get_current_corpocard(code: str, db: Session = Depends(get_db)):
+    """
+    Retourne le défi en cours. Si aucun défi n'est tiré pour ce round,
+    en tire un aléatoirement, le stocke et le retourne.
+    Tous les joueurs appellent cette route → ils reçoivent tous le MÊME défi.
+    """
+    party = db.query(Party).filter(Party.code == code).first()
+    if not party:
+        raise HTTPException(404, "Partie introuvable")
+
+    # Si un défi est déjà tiré pour ce round → retourner le même
+    if party.current_defi_id:
+        card = next((c for c in CORPO_CARDS if c["id"] == party.current_defi_id), None)
+        if card:
+            return card
+
+    # Sinon tirer un nouveau défi aléatoire
+    available = [c for c in CORPO_CARDS if c["type"] != "direct_fail"]
+    if not available:
+        available = CORPO_CARDS
+
+    card = random.choice(available)
+    party.current_defi_id = card["id"]
+    db.commit()
+
+    return card
+
+
+# ---------------------------------------------------------
+# TIFFANY — Proposer 5 mots parmi ceux pas encore utilisés
+# ---------------------------------------------------------
+@router.get("/tiff/propose/{code}")
+def tiff_propose_mots(code: str, db: Session = Depends(get_db)):
+    party = db.query(Party).filter(Party.code == code).first()
+    if not party:
+        raise HTTPException(404, "Partie introuvable")
+
+    # Mots déjà utilisés
+    used = json.loads(party.tiff_mots_actifs or "[]") + json.loads(party.tiff_mots_utilises or "[]")
+    available = [m for m in TIFF_MOTS_DISPONIBLES if m not in used]
+
+    # Si plus assez de mots → reset des utilisés (on garde juste les actifs)
+    if len(available) < 5:
+        party.tiff_mots_utilises = "[]"
+        db.commit()
+        actifs = json.loads(party.tiff_mots_actifs or "[]")
+        available = [m for m in TIFF_MOTS_DISPONIBLES if m not in actifs]
+
+    proposed = random.sample(available, min(5, len(available)))
+    return {"mots": proposed}
+
+
+# ---------------------------------------------------------
+# TIFFANY — Enregistrer les 3 mots choisis
+# ---------------------------------------------------------
+class TiffMotsRequest(BaseModel):
+    code: str
+    mots: list
+
+@router.post("/tiff/choisir")
+async def tiff_choisir_mots(request: TiffMotsRequest, db: Session = Depends(get_db)):
+    party = db.query(Party).filter(Party.code == request.code).first()
+    if not party:
+        raise HTTPException(404, "Partie introuvable")
+
+    if len(request.mots) != 3:
+        raise HTTPException(400, "Tu dois choisir exactement 3 mots")
+
+    # Ajouter aux mots actifs
+    actifs = json.loads(party.tiff_mots_actifs or "[]")
+    utilises = json.loads(party.tiff_mots_utilises or "[]")
+
+    for mot in request.mots:
+        if mot not in actifs:
+            actifs.append(mot)
+        if mot not in utilises:
+            utilises.append(mot)
+
+    party.tiff_mots_actifs = json.dumps(actifs)
+    party.tiff_mots_utilises = json.dumps(utilises)
+    db.commit()
+
+    print(f"🔒 Mots interdits actifs (SECRET) : {actifs}")
+
+    # 🔥 NE PAS broadcaster — les mots sont SECRETS
+    # Seule confirmation : la route retourne les mots à Tiffany uniquement (via HTTP)
+    # Les autres joueurs ne savent pas quels mots sont interdits
+
+    return {"message": "Mots enregistrés en secret !", "mots_actifs": actifs}
+
+
+# ---------------------------------------------------------
+# TIFFANY — Récupérer les mots actifs
+# ---------------------------------------------------------
+@router.get("/tiff/mots_actifs/{code}")
+def get_tiff_mots(code: str, db: Session = Depends(get_db)):
+    party = db.query(Party).filter(Party.code == code).first()
+    if not party:
+        raise HTTPException(404, "Partie introuvable")
+    actifs = json.loads(party.tiff_mots_actifs or "[]")
+    return {"mots_actifs": actifs}
+
+
+# ---------------------------------------------------------
+# RÉCUPÉRER LES DONNÉES COMPLÈTES D'UN RÔLE
+# ---------------------------------------------------------
+@router.get("/role_info/{role_name}")
+def get_role_info(role_name: str):
+    role = next((r for r in ALL_ROLES if r["name"] == role_name), None)
+    if not role:
+        raise HTTPException(404, "Rôle introuvable")
+    return role
+
+
+# ---------------------------------------------------------
+# PERFORMANCE DU DÉFI TERMINÉE (la victime a fini son action)
+# → Déclenche le vote du jury chez les autres
+# ---------------------------------------------------------
+@router.post("/defi_performance_done/{code}")
+async def defi_performance_done(code: str, db: Session = Depends(get_db)):
+    party = db.query(Party).filter(Party.code == code).first()
+    if not party:
+        raise HTTPException(404, "Partie introuvable")
+
+    # 🔥 NE PAS écraser defi_sub_phase — on en a besoin dans next_phase
+    # On stocke juste que la performance est terminée dans meeting_phase
+    # defi_sub_phase reste "running_from_vote" ou "running_from_meeting"
+    db.commit()
+
+    # Signal au jury pour voter
+    await broadcast(code, "phase:resultat_defi")
+    return {"message": "Performance terminée, vote du jury ouvert"}
+
+
+# ---------------------------------------------------------
+# VOTE DÉFI — Les observateurs évaluent la performance
+# ---------------------------------------------------------
+@router.post("/defi_vote")
+async def defi_vote(request: DefiVoteRequest, db: Session = Depends(get_db)):
+    party = db.query(Party).filter(Party.code == request.party_code).first()
+    if not party:
+        raise HTTPException(404, "Partie introuvable")
+
+    voter = db.query(Player).filter(Player.id == request.voter_id).first()
+    if not voter:
+        raise HTTPException(400, "Joueur introuvable")
+
+    # Stocker le vote : 1 = succès, 2 = échec
+    voter.revealed_to = 1 if request.success else 2
+    db.commit()
+
+    # Tous les joueurs vivants de la partie SAUF la victime du défi
+    # (la victime peut être encore alive=True pendant le défi → on l'exclut explicitement)
+    jury = db.query(Player).filter(
+        Player.party_id == party.id,
+        Player.is_alive == True,
+        Player.id != party.last_eliminated_id
+    ).all()
+
+    # Compter uniquement les votes défi (1 ou 2), pas les None restants d'anciens votes
+    votes_cast = [p for p in jury if p.revealed_to in (1, 2)]
+
+    print(f"🗳️ Votes défi : {len(votes_cast)}/{len(jury)}")
+
+    if len(votes_cast) >= len(jury):
+        yes_votes = sum(1 for p in votes_cast if p.revealed_to == 1)
+        no_votes  = sum(1 for p in votes_cast if p.revealed_to == 2)
+        success   = yes_votes > no_votes   # majorité stricte requise, égalité = échec
+
+        print(f"📊 Résultat défi : {yes_votes} oui / {no_votes} non → {'succès' if success else 'échec'}")
+
+        # Nettoyage des votes pour le prochain round
+        for p in jury:
+            p.revealed_to = None
+
+        # Appliquer le résultat à la victime
+        eliminated = db.query(Player).filter(Player.id == party.last_eliminated_id).first()
+        if eliminated:
+            eliminated.has_drawn_corpocard = True
+            eliminated.is_alive = success
+            eliminated.victim_of_managers = False
+            eliminated.victim_of_claire   = False
+            print(f"{'✅' if success else '❌'} Défi {'réussi' if success else 'échoué'} pour {eliminated.pseudo}")
+        db.commit()
+
+        # Vérif fin de partie
+        alive_after    = db.query(Player).filter(Player.party_id == party.id, Player.is_alive == True).all()
+        alive_managers = [p for p in alive_after if p.is_manager]
+        alive_collabs  = [p for p in alive_after if not p.is_manager]
+
+        if not alive_managers:
+            await broadcast(request.party_code, "game_over:victoire_collabs")
+            return {"message": "Victoire des Collaborateurs"}
+        if not alive_collabs:
+            await broadcast(request.party_code, "game_over:victoire_managers")
+            return {"message": "Victoire des Managers"}
+
+        # 🔥 Reset le défi — le prochain licencié aura un défi différent
+        party.current_defi_id = None
+        db.commit()
+
+        result = "success" if success else "fail"
+        await broadcast(request.party_code, f"defi_result:{result}")
+
+    return {"message": "Vote défi enregistré"}
+
+
+# ---------------------------------------------------------
+# PHASE SUIVANTE après résultat du défi
+# → Appelé par resultat_defi.html quand le host clique "Continuer"
+# ---------------------------------------------------------
+@router.post("/next_phase/{code}")
+async def next_phase(code: str, db: Session = Depends(get_db)):
+    """
+    Appelé après le résultat du défi (par le host).
+    Gère la file d'attente en cas d'égalité (plusieurs éliminés à tour de rôle).
+    - Si le défi venait du MEETING → feedback ensuite
+    - Si le défi venait du VOTE → meeting suivant ensuite
+    """
+    party = db.query(Party).filter(Party.code == code).first()
+    if not party:
+        raise HTTPException(404, "Partie introuvable")
+
+    # Vérif fin de partie
+    alive = db.query(Player).filter(
+        Player.party_id == party.id,
+        Player.is_alive == True
+    ).all()
+    alive_managers = [p for p in alive if p.is_manager]
+    alive_collabs  = [p for p in alive if not p.is_manager]
+
+    if not alive_managers:
+        await broadcast(code, "game_over:victoire_collabs")
+        return {"message": "Victoire des Collaborateurs"}
+    if not alive_collabs:
+        await broadcast(code, "game_over:victoire_managers")
+        return {"message": "Victoire des Managers"}
+
+    # 🔥 Lire l'origine AVANT de modifier quoi que ce soit
+    came_from_vote = party.defi_sub_phase == "running_from_vote"
+
+    # 🔥 Vérifier s'il reste d'autres éliminés dans la file (cas d'égalité)
+    eliminated_queue = json.loads(party.turn_order) if party.turn_order else []
+    next_turn_index  = (party.current_turn or 0) + 1
+
+    if next_turn_index < len(eliminated_queue):
+        # Il reste un autre joueur à traiter dans la file
+        next_victim_id = eliminated_queue[next_turn_index]
+        next_victim    = db.query(Player).filter(Player.id == next_victim_id).first()
+
+        print(f"➡️ File d'attente : passage au joueur suivant {next_victim.pseudo if next_victim else '?'}")
+
+        if next_victim and next_victim.has_drawn_corpocard:
+            # Joker déjà utilisé → élimination directe
+            next_victim.is_alive = False
+            party.last_eliminated_id = next_victim_id
+            party.current_turn = next_turn_index
+            db.commit()
+
+            # Vérif fin de partie après élimination directe
+            alive2 = db.query(Player).filter(Player.party_id == party.id, Player.is_alive == True).all()
+            if not [p for p in alive2 if p.is_manager]:
+                await broadcast(code, "game_over:victoire_collabs")
+                return {"message": "Victoire Collaborateurs"}
+            if not [p for p in alive2 if not p.is_manager]:
+                await broadcast(code, "game_over:victoire_managers")
+                return {"message": "Victoire Managers"}
+
+            await broadcast(code, f"player_eliminated_direct:{next_victim.pseudo}:{next_victim.role}")
+            await asyncio.sleep(5)
+            # Passer au suivant dans la file récursivement
+            await _process_next_in_queue(code, party.id, next_turn_index, came_from_vote)
+        else:
+            # Joker disponible → proposer le défi
+            party.last_eliminated_id = next_victim_id
+            party.current_turn       = next_turn_index
+            # Conserver came_from_vote dans defi_sub_phase
+            party.defi_sub_phase = "running_from_vote" if came_from_vote else "running_from_meeting"
+            db.commit()
+            await broadcast(code, "phase:defi_decision")
+
+        return {"message": "Joueur suivant dans la file"}
+
+    # File épuisée → passer à la phase suivante
+    db.query(Player).filter(Player.party_id == party.id).update({
+        "victim_of_managers": False,
+        "victim_of_claire": False
+    })
+    party.last_eliminated_id = None
+    party.turn_order         = None
+    party.defi_sub_phase     = None
+
+    if came_from_vote:
+        db.commit()
+        await _launch_next_meeting(code, party.id, db)
+    else:
+        party.meeting_phase = "feedback"
+        db.commit()
+        await broadcast(code, "phase:feedback")
+
+    return {"message": "Phase suivante déclenchée"}
+
+
+async def _process_next_in_queue(code: str, party_id: int, current_index: int, came_from_vote: bool):
+    """Traite le joueur suivant dans la file d'élimination."""
+    db = SessionLocal()
+    try:
+        party = db.query(Party).filter(Party.id == party_id).first()
+        if not party:
+            return
+
+        eliminated_queue = json.loads(party.turn_order) if party.turn_order else []
+        next_index = current_index + 1
+
+        if next_index < len(eliminated_queue):
+            next_victim_id = eliminated_queue[next_index]
+            next_victim    = db.query(Player).filter(Player.id == next_victim_id).first()
+
+            if next_victim and next_victim.has_drawn_corpocard:
+                next_victim.is_alive = False
+                party.last_eliminated_id = next_victim_id
+                party.current_turn = next_index
+                db.commit()
+                await broadcast(code, f"player_eliminated_direct:{next_victim.pseudo}:{next_victim.role}")
+                await asyncio.sleep(5)
+                await _process_next_in_queue(code, party_id, next_index, came_from_vote)
+            else:
+                party.last_eliminated_id = next_victim_id
+                party.current_turn       = next_index
+                party.defi_sub_phase = "running_from_vote" if came_from_vote else "running_from_meeting"
+                db.commit()
+                await broadcast(code, "phase:defi_decision")
+        else:
+            # File épuisée → vérifier s'il reste des vivants
+            alive_remaining = db.query(Player).filter(
+                Player.party_id == party_id,
+                Player.is_alive == True
+            ).all()
+
+            if not alive_remaining:
+                # Plus personne de vivant → match nul
+                db.commit()
+                await broadcast(code, "game_over:match_nul")
+                return
+
+            # Vérif victoire/défaite normale
+            managers = [p for p in alive_remaining if p.is_manager]
+            collabs  = [p for p in alive_remaining if not p.is_manager]
+            if not managers:
+                db.commit()
+                await broadcast(code, "game_over:victoire_collabs")
+                return
+            if not collabs:
+                db.commit()
+                await broadcast(code, "game_over:victoire_managers")
+                return
+
+            db.query(Player).filter(Player.party_id == party_id).update({
+                "victim_of_managers": False,
+                "victim_of_claire": False
+            })
+            party.last_eliminated_id = None
+            party.turn_order         = None
+            party.defi_sub_phase     = None
+            if came_from_vote:
+                db.commit()
+                await _launch_next_meeting(code, party_id, db)
+            else:
+                party.meeting_phase = "feedback"
+                db.commit()
+                await broadcast(code, "phase:feedback:pre_vote")
+    finally:
+        db.close()
+
+
+
+
+
+
+
+
+# ---------------------------------------------------------
+# CINDY — Info secrète sur ses voisins (privée)
+# ---------------------------------------------------------
+@router.get("/cindy/voisins/{code}/{player_id}")
+async def cindy_voisins(code: str, player_id: int, db: Session = Depends(get_db)):
+    """
+    Retourne en PRIVÉ à Cindy si l'un de ses voisins est Manager.
+    Le résultat est envoyé via WebSocket privé.
+    """
+    party = db.query(Party).filter(Party.code == code).first()
+    if not party or not party.turn_order:
+        raise HTTPException(404, "Partie introuvable")
+
+    import json as _json
+    turn_order = _json.loads(party.turn_order)
+
+    # Trouver la position de Cindy dans le tour
+    all_players = db.query(Player).filter(
+        Player.party_id == party.id,
+        Player.is_alive == True
+    ).all()
+
+    # Retrouver les IDs dans l'ordre de la table (pas du meeting)
+    cindy = db.query(Player).filter(Player.id == player_id).first()
+    if not cindy:
+        raise HTTPException(404, "Joueur introuvable")
+
+    # Récupérer tous les joueurs vivants triés par ID (ordre de la table)
+    all_alive = sorted(all_players, key=lambda p: p.id)
+    cindy_idx = next((i for i, p in enumerate(all_alive) if p.id == player_id), -1)
+
+    if cindy_idx == -1:
+        return {"has_manager_neighbor": False}
+
+    total = len(all_alive)
+    left  = all_alive[(cindy_idx - 1) % total]
+    right = all_alive[(cindy_idx + 1) % total]
+
+    has_manager = left.is_manager or right.is_manager
+
+    # Envoyer le résultat en PRIVÉ via WebSocket
+    from websocket_manager import connections
+    if code in connections and player_id in connections[code]:
+        msg = "cindy_voisin:oui" if has_manager else "cindy_voisin:non"
+        try:
+            await connections[code][player_id].send_text(msg)
+        except:
+            pass
+
+    return {"has_manager_neighbor": has_manager}
+
+# ---------------------------------------------------------
+# TIRER LE DÉFI (appelé une seule fois par le serveur)
+# Le défi est stocké ET broadcasté à tous les joueurs
+# ---------------------------------------------------------
+@router.post("/draw_defi/{code}")
+async def draw_defi(code: str, db: Session = Depends(get_db)):
+    party = db.query(Party).filter(Party.code == code).first()
+    if not party:
+        raise HTTPException(404, "Partie introuvable")
+
+    # Si déjà tiré pour ce round → retourner le même
+    if party.current_defi_id:
+        card = next((c for c in CORPO_CARDS if c["id"] == party.current_defi_id), None)
+        if card:
+            await broadcast(code, f"defi_card:{json.dumps(card)}")
+            return card
+
+    # Tirer un nouveau défi aléatoire
+    available = [c for c in CORPO_CARDS if c["type"] != "direct_fail"]
+    card = random.choice(available)
+    party.current_defi_id = card["id"]
+    db.commit()
+
+    # Broadcaster le défi à TOUS les joueurs
+    await broadcast(code, f"defi_card:{json.dumps(card)}")
+    return card
+
+# ---------------------------------------------------------
+# COLLECTIF — Le CHO déclare le perdant
+# ---------------------------------------------------------
+class CollectifLoserRequest(BaseModel):
+    party_code: str
+    loser_id: int
+
+@router.post("/collectif_loser")
+async def collectif_loser(request: CollectifLoserRequest, db: Session = Depends(get_db)):
+    party = db.query(Party).filter(Party.code == request.party_code).first()
+    if not party:
+        raise HTTPException(404, "Partie introuvable")
+
+    loser = db.query(Player).filter(Player.id == request.loser_id).first()
+    if not loser:
+        raise HTTPException(404, "Joueur introuvable")
+
+    if not loser.has_drawn_corpocard:
+        # Proposer le défi
+        loser.victim_of_managers = True
+        party.last_eliminated_id = loser.id
+        party.meeting_phase      = "vote_defi"
+        party.defi_sub_phase     = "running_from_vote"
+        party.turn_order         = json.dumps([loser.id])
+        party.current_turn       = 0
+        db.commit()
+        await broadcast(request.party_code, f"player_eliminated_direct:{loser.pseudo}:collectif")
+        await asyncio.sleep(2)
+        await broadcast(request.party_code, "phase:defi_decision")
+    else:
+        loser.is_alive = False
+        db.commit()
+        await broadcast(request.party_code, f"player_eliminated_direct:{loser.pseudo}:{loser.role}")
+
+        alive = db.query(Player).filter(Player.party_id == party.id, Player.is_alive == True).all()
+        if not [p for p in alive if p.is_manager]:
+            await broadcast(request.party_code, "game_over:victoire_collabs")
+        elif not [p for p in alive if not p.is_manager]:
+            await broadcast(request.party_code, "game_over:victoire_managers")
+        else:
+            await _launch_next_meeting(request.party_code, party.id, db)
+
+    # Reset le défi pour le prochain licencié
+    party.current_defi_id = None
+    db.commit()
+    return {"message": "Perdant déclaré"}
+
+
+# ---------------------------------------------------------
+# DÉFI SPÉCIAL — Effets particuliers
+# ---------------------------------------------------------
+class DefiSpecialRequest(BaseModel):
+    party_code: str
+    player_id: int
+    special_type: str
+    target_id: int = None
+
+@router.post("/defi_special")
+async def defi_special(request: DefiSpecialRequest, db: Session = Depends(get_db)):
+    party = db.query(Party).filter(Party.code == request.party_code).first()
+    if not party:
+        raise HTTPException(404, "Partie introuvable")
+
+    player = db.query(Player).filter(Player.id == request.player_id).first()
+    if not player:
+        raise HTTPException(404, "Joueur introuvable")
+
+    stype = request.special_type
+
+    if stype == "become_manager":
+        # Le joueur rejoint les managers
+        player.is_manager = True
+        player.role       = "Fabien"
+        player.is_alive   = True
+        player.has_drawn_corpocard = True
+        db.commit()
+        await broadcast(request.party_code, f"player_became_manager:{player.pseudo}")
+        await asyncio.sleep(3)
+        await _end_special_defi(request.party_code, party, db)
+
+    elif stype == "skip_meeting":
+        # Revient au prochain meeting — reste en jeu
+        player.is_alive = True
+        player.has_drawn_corpocard = True
+        db.commit()
+        await broadcast(request.party_code, f"player_skip_meeting:{player.pseudo}")
+        await asyncio.sleep(2)
+        await _end_special_defi(request.party_code, party, db)
+
+    elif stype == "contaminate_abdel":
+        # Contaminé par Abdel
+        player.virus_from_abdel = True
+        player.is_alive = True
+        player.has_drawn_corpocard = True
+        db.commit()
+        await broadcast(request.party_code, f"player_contaminated:{player.pseudo}")
+        await asyncio.sleep(2)
+        await _end_special_defi(request.party_code, party, db)
+
+    elif stype == "designate_victim":
+        # Désigne une autre victime à sa place
+        if not request.target_id:
+            raise HTTPException(400, "target_id requis")
+        target = db.query(Player).filter(Player.id == request.target_id).first()
+        if not target:
+            raise HTTPException(404, "Cible introuvable")
+
+        player.is_alive = True
+        player.has_drawn_corpocard = True
+
+        if not target.has_drawn_corpocard:
+            target.victim_of_managers = True
+            party.last_eliminated_id  = target.id
+            party.meeting_phase       = "vote_defi"
+            party.defi_sub_phase      = "running_from_vote"
+            party.turn_order          = json.dumps([target.id])
+            party.current_turn        = 0
+            db.commit()
+            await broadcast(request.party_code, f"player_designated:{player.pseudo}:{target.pseudo}")
+            await asyncio.sleep(2)
+            await broadcast(request.party_code, "phase:defi_decision")
+        else:
+            target.is_alive = False
+            db.commit()
+            await broadcast(request.party_code, f"player_eliminated_direct:{target.pseudo}:{target.role}")
+            await asyncio.sleep(2)
+            await _end_special_defi(request.party_code, party, db)
+
+    elif stype == "cumul_roles":
+        # Attribuer un 2ème rôle aléatoire
+        current_roles = [p.role for p in db.query(Player).filter(Player.party_id == party.id).all()]
+        available_roles = [r for r in ALL_ROLES if r["name"] not in current_roles]
+        if available_roles:
+            new_role = random.choice(available_roles)
+            player.last_role = new_role["name"]  # Stocker comme rôle secondaire
+        player.is_alive = True
+        player.has_drawn_corpocard = True
+        db.commit()
+        await broadcast(request.party_code, f"player_cumul_roles:{player.pseudo}:{player.last_role}")
+        await asyncio.sleep(2)
+        await _end_special_defi(request.party_code, party, db)
+
+    return {"message": "Effet spécial appliqué"}
+
+
+async def _end_special_defi(code: str, party, db):
+    """Après un défi spécial, continuer le flux normal."""
+    came_from_vote = party.defi_sub_phase == "running_from_vote"
+
+    # Nettoyer
+    db.query(Player).filter(Player.party_id == party.id).update({
+        "victim_of_managers": False, "victim_of_claire": False
+    })
+    party.last_eliminated_id = None
+    party.defi_sub_phase     = None
+
+    alive = db.query(Player).filter(Player.party_id == party.id, Player.is_alive == True).all()
+    if not [p for p in alive if p.is_manager]:
+        db.commit()
+        await broadcast(code, "game_over:victoire_collabs")
+        return
+    if not [p for p in alive if not p.is_manager]:
+        db.commit()
+        await broadcast(code, "game_over:victoire_managers")
+        return
+
+    if came_from_vote:
+        db.commit()
+        await _launch_next_meeting(code, party.id, db)
+    else:
+        party.meeting_phase = "feedback"
+        db.commit()
+        await broadcast(code, "phase:feedback:pre_vote")
+
+async def _launch_next_meeting(code: str, party_id: int, db: Session):
+    """Reset la partie et lance le meeting suivant."""
+    party = db.query(Party).filter(Party.id == party_id).first()
+    if not party:
+        return
+
+    party.meeting_number += 1
+    party.meeting_phase = "waiting"
+    party.defi_sub_phase = None
+    party.turn_order = None
+    party.current_turn = 0
+    party.last_eliminated_id = None
+
+    # Reset uniquement les flags de victime (pas has_drawn_corpocard !)
+    db.query(Player).filter(Player.party_id == party_id).update({
+        "victim_of_managers": False,
+        "victim_of_claire": False
+    })
+    db.commit()
+
+    print(f"🔄 Lancement Meeting {party.meeting_number} — room {code}")
+    await broadcast(code, f"next_meeting:{party.meeting_number}")
+    await asyncio.sleep(4)
+
+    db_fresh = SessionLocal()
+    try:
+        await start_meeting(code, db_fresh)
+    except Exception as e:
+        print(f"❌ Erreur start_meeting : {e}")
+    finally:
+        db_fresh.close()
+
+
+# ---------------------------------------------------------
+# RÉCUPÉRER LA VICTIME DU MEETING en cours (pour feedback_defi)
+# ---------------------------------------------------------
+@router.get("/meeting_victim/{code}")
+def get_meeting_victim(code: str, db: Session = Depends(get_db)):
+    party = db.query(Party).filter(Party.code == code).first()
+    if not party:
+        raise HTTPException(404, "Partie introuvable")
+
+    if not party.last_eliminated_id:
+        return {"victim": None}
+
+    victim = db.query(Player).filter(Player.id == party.last_eliminated_id).first()
+    if not victim:
+        return {"victim": None}
+
+    return {
+        "victim": {
+            "id": victim.id,
+            "player_id": victim.id,
+            "pseudo": victim.pseudo,
+            "role": victim.role,
+            "is_alive": victim.is_alive,
+            "has_drawn_corpocard": victim.has_drawn_corpocard
+        }
+    }
+
+
+# ---------------------------------------------------------
+# LANCER LE MEETING SUIVANT
+# ---------------------------------------------------------
+@router.post("/next_meeting/{code}")
+async def next_meeting(code: str, db: Session = Depends(get_db)):
+    party = db.query(Party).filter(Party.code == code).first()
+    if not party:
+        raise HTTPException(404, "Partie introuvable")
+
+    party.meeting_number += 1
+    party.meeting_phase = "waiting"
+    party.defi_sub_phase = None
+    party.turn_order = None
+    party.current_turn = 0
+    party.last_eliminated_id = None
+
+    # Reset des flags de victime pour le nouveau meeting
+    db.query(Player).filter(Player.party_id == party.id).update({
+        "victim_of_managers": False,
+        "victim_of_claire": False
+    })
+    db.commit()
+
+    print(f"🔄 Passage au Meeting {party.meeting_number} pour la room {code}")
+    await broadcast(code, f"next_meeting:{party.meeting_number}")
+    await asyncio.sleep(3)
+
+    db_fresh = SessionLocal()
+    try:
+        await start_meeting(code, db_fresh)
+    except Exception as e:
+        print(f"❌ Erreur start_meeting : {e}")
+    finally:
+        db_fresh.close()
+
+    return {"message": f"Meeting {party.meeting_number} lancé"}
