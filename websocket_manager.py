@@ -512,7 +512,7 @@ async def handle_message(code: str, websocket, message: str):
             "bordel", "ostie", "câlice", "crisse", "tabarnak", "viarge",
             "fuck", "shit", "bitch", "asshole", "bastard", "cunt",
             "motherfucker", "damn", "idiot", "idiot", "abruti", "imbécile",
-            "imbecile", "crétin", "cretin", "débile", "debile"
+            "imbecile", "crétin", "cretin", "débile", "debile", "ntr"
         ]
 
         texte_lower = texte.lower()
@@ -539,56 +539,46 @@ async def handle_message(code: str, websocket, message: str):
 
         # 🔥 Vérifier les mots interdits de Tiffany
         db_tiff = SessionLocal()
-        try:
-            party_tiff = db_tiff.query(Party).filter(Party.code == code).first()
-            if party_tiff and party_tiff.tiff_mots_actifs:
-                import json as _json
-                mots_actifs = _json.loads(party_tiff.tiff_mots_actifs or "[]")
-                texte_lower = texte.lower()
-                mot_interdit_trouve = None
-                for mot in mots_actifs:
-                    if mot.lower() in texte_lower:
-                        mot_interdit_trouve = mot
-                        break
+        party_tiff = db_tiff.query(Party).filter(Party.code == code).first()
+        if party_tiff and party_tiff.tiff_mots_actifs:
+            import json as _json
+            mots_actifs = _json.loads(party_tiff.tiff_mots_actifs or "[]")
+            texte_lower = texte.lower()
+            mot_interdit_trouve = None
+            for mot in mots_actifs:
+                if mot.lower() in texte_lower:
+                    mot_interdit_trouve = mot
+                    break
 
-                if mot_interdit_trouve:
-                    # Trouver le joueur qui a envoyé ce message
-                    coupable = db_tiff.query(Player).filter(Player.pseudo == pseudo).first()
-                    if coupable and coupable.is_alive:
-                        print(f"🚫 {pseudo} a dit le mot interdit '{mot_interdit_trouve}' → licencié !")
-                        await broadcast(code, f"chat:{pseudo} : {texte}")  # Afficher quand même le message
+            if mot_interdit_trouve:
+                coupable = db_tiff.query(Player).filter(Player.pseudo == pseudo).first()
+                if coupable and coupable.is_alive:
+                    # Afficher le message quand même
+                    await broadcast(code, f"chat:{pseudo} : {texte}")
+                    await broadcast(code, f"mot_interdit:{pseudo}:{mot_interdit_trouve}")
 
-                        if not coupable.has_drawn_corpocard:
-                            # A encore son joker → feedback_defi
-                            coupable.victim_of_managers = True
-                            party_tiff.last_eliminated_id = coupable.id
-                            party_tiff.meeting_phase = "vote_defi"
-                            party_tiff.defi_sub_phase = "running_from_vote"
-                            party_tiff.turn_order = _json.dumps([coupable.id])
-                            party_tiff.current_turn = 0
-                            db_tiff.commit()
-                            await broadcast(code, f"mot_interdit:{pseudo}:{mot_interdit_trouve}")
-                            await asyncio.sleep(2)
-                            await broadcast(code, "phase:defi_decision")
-                        else:
-                            # Joker déjà utilisé → élimination directe
-                            coupable.is_alive = False
-                            db_tiff.commit()
-                            await broadcast(code, f"player_eliminated_direct:{coupable.pseudo}:{coupable.role}")
-
-                            # Vérif fin de partie
-                            alive = db_tiff.query(Player).filter(
-                                Player.party_id == party_tiff.id, Player.is_alive == True
-                            ).all()
-                            if not [p for p in alive if p.is_manager]:
-                                await broadcast(code, "game_over:victoire_collabs")
-                            elif not [p for p in alive if not p.is_manager]:
-                                await broadcast(code, "game_over:victoire_managers")
-                        db_tiff.close()
-                        return
-        finally:
-            try: db_tiff.close()
-            except: pass
-
-        await broadcast(code, f"chat:{pseudo} : {texte}")
-        return
+                    if not coupable.has_drawn_corpocard:
+                        # Joker dispo → défi corpo
+                        coupable.victim_of_managers = True
+                        party_tiff.last_eliminated_id = coupable.id
+                        party_tiff.meeting_phase = "vote_defi"
+                        party_tiff.defi_sub_phase = "running_from_vote"
+                        party_tiff.turn_order = _json.dumps([coupable.id])
+                        party_tiff.current_turn = 0
+                        db_tiff.commit()
+                        await asyncio.sleep(2)
+                        await broadcast(code, "phase:defi_decision")
+                    else:
+                        # Joker déjà utilisé → licenciement direct
+                        coupable.is_alive = False
+                        db_tiff.commit()
+                        await broadcast(code, f"player_eliminated_direct:{coupable.pseudo}:{coupable.role}")
+                        alive = db_tiff.query(Player).filter(
+                            Player.party_id == party_tiff.id, Player.is_alive == True
+                        ).all()
+                        if not [p for p in alive if p.is_manager]:
+                            await broadcast(code, "game_over:victoire_collabs")
+                        elif not [p for p in alive if not p.is_manager]:
+                            await broadcast(code, "game_over:victoire_managers")
+                db_tiff.close()
+                return
