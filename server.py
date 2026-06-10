@@ -1,5 +1,7 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 from database.connection import engine, Base, SessionLocal
 from datetime import datetime, timedelta
 import asyncio
@@ -12,10 +14,11 @@ from websocket_manager import connections, handle_message, disconnect
 
 app = FastAPI()
 
+# 🔥 CORS complet — nécessaire pour Render + WebSocket
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,  # ← IMPORTANT : False quand allow_origins=["*"]
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -37,16 +40,14 @@ app.include_router(meetingRoutes.router)
 @app.websocket("/ws/{code}")
 async def websocket_endpoint(websocket: WebSocket, code: str, player_id: int = Query(...)):
     """
-    Le client se connecte desormais en fournissant son ID unique :
-    Exemple : ws://127.0.0.1:8000/ws/CODE?player_id=12
+    Le client se connecte en fournissant son ID unique :
+    Exemple : wss://corpo-backend.onrender.com/ws/CODE?player_id=12
     """
     await websocket.accept()
 
-    # Initialisation de la room sous forme de dictionnaire si elle n'existe pas
     if code not in connections:
         connections[code] = {}
 
-    # Enregistrement du WebSocket associé à l'ID du joueur
     connections[code][player_id] = websocket
     print(f"🔌 Joueur {player_id} connecté dans la room {code}")
 
@@ -62,62 +63,3 @@ async def websocket_endpoint(websocket: WebSocket, code: str, player_id: int = Q
 
     except WebSocketDisconnect:
         await disconnect(code, websocket)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
