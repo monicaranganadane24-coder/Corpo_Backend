@@ -580,10 +580,8 @@ async def handle_message(code: str, websocket, message: str):
                             await broadcast(code, "game_over:victoire_collabs")
                         elif not [p for p in alive if not p.is_manager]:
                             await broadcast(code, "game_over:victoire_managers")
-                db_tiff.close()
-                return
+        db_tiff.close()
             
-    db_tiff.close()
      # Message normal (pas de mot interdit Tiffany) → broadcaster
     await broadcast(code, f"chat:{pseudo} : {texte}")
     return
