@@ -198,9 +198,9 @@ CORPO_CARDS = [
     },
     {
         "id": 12, "type": "vote", "timer": 30, "duo": True,
-        "text": "En 30 secondes et à l'aide d'un joueur, avoue 10 choses que tu fais quand tu es en télétravail au lieu de travailler.",
-        "instructions": "Netflix, sieste, promenade du chien... À deux on va plus loin ! La majorité valide.",
-        "vote_label": "Ont-ils/elles réussi les 10 aveux ?"
+        "text": "Tu as 30 secondes. Convaincs l'entreprise de t'accorder une augmentation en 3 arguments maximum.",
+        "instructions": "Sois percutant et droit au but ! Si la majorité valide → tu restes !",
+        "vote_label": "Les arguments méritent-ils une augmentation ?"
     },
     {
         "id": 13, "type": "vote", "timer": 30, "duo": False,
@@ -221,73 +221,7 @@ CORPO_CARDS = [
         "vote_label": ""
     },
 
-    # ══════════════════════════════
-    # 10 DÉFIS COLLECTIFS
-    # ══════════════════════════════
-
-    {
-        "id": 16, "type": "collectif", "timer": None, "duo": False,
-        "text": "C'est l'afterwork ! À tour de rôle dans le chat, citez une marque de bière. Celui qui ne trouve plus est licencié.",
-        "instructions": "Dans le chat, écrivez votre marque à tour de rôle. Le CHO déclare le perdant.",
-        "vote_label": "", "collectif_mode": "tour_de_role"
-    },
-    {
-        "id": 17, "type": "collectif", "timer": None, "duo": False,
-        "text": "À tour de rôle, les joueurs citent un goût de capsule de café. Celui qui n'en trouve plus est licencié.",
-        "instructions": "Ristretto, Volluto, Capriccio... dans le chat ! Le CHO déclare le perdant.",
-        "vote_label": "", "collectif_mode": "tour_de_role"
-    },
-    {
-        "id": 18, "type": "collectif", "timer": None, "duo": False,
-        "text": "Chaque joueur dit combien de pauses clope il fait dans la journée. Celui qui en fait le plus est éliminé.",
-        "instructions": "Tout le monde répond dans le chat. Le CHO déclare le perdant.",
-        "vote_label": "", "collectif_mode": "sondage"
-    },
-    {
-        "id": 19, "type": "collectif", "timer": None, "duo": False,
-        "text": "Chaque joueur dit combien de fois il va aux toilettes par jour. Celui qui y va le plus est éliminé.",
-        "instructions": "Soyez honnêtes... dans le chat ! Le CHO déclare le perdant.",
-        "vote_label": "", "collectif_mode": "sondage"
-    },
-    {
-        "id": 20, "type": "collectif", "timer": 60, "duo": False,
-        "text": "Tout le monde se détend et doit tenir 1 minute en faisant la chaise. Les perdants sont licenciés.",
-        "instructions": "Dos au mur, cuisses parallèles au sol. Ceux qui lâchent avant 1 min sont licenciés. Le CHO déclare les perdants.",
-        "vote_label": "", "collectif_mode": "physique"
-    },
-    {
-        "id": 21, "type": "collectif", "timer": 30, "duo": False,
-        "text": "C'est la fin de l'afterwork, prenez l'ethylotest ! Pendant 30 secondes, passez tous une main sous la jambe et attrapez-vous le nez. Ceux qui lâchent sont licenciés.",
-        "instructions": "Tout le monde joue ! Le CHO déclare les perdants.",
-        "vote_label": "", "collectif_mode": "physique"
-    },
-    {
-        "id": 22, "type": "collectif", "timer": 120, "duo": False,
-        "text": "Toute l'entreprise est proche du burn-out. Fermez les yeux, détendez-vous 2 minutes. Ceux qui rigolent ou parlent sont licenciés.",
-        "instructions": "Silence total ! Le CHO surveille. Ceux qui craquent sont licenciés.",
-        "vote_label": "", "collectif_mode": "silence"
-    },
-    {
-        "id": 23, "type": "collectif", "timer": None, "duo": False,
-        "text": "Networking ou opportunisme ? Tout le monde annonce son nombre de connexions LinkedIn dans le chat. Celui qui en a le plus est licencié.",
-        "instructions": "Répondez dans le chat. Le CHO déclare le perdant.",
-        "vote_label": "", "collectif_mode": "sondage"
-    },
-    {
-        "id": 24, "type": "collectif", "timer": 30, "duo": True,
-        "text": "À l'aide d'un joueur, tu as 30 secondes pour citer 10 formes de pâtes différentes dans le chat.",
-        "instructions": "Penne, fusilli, tagliatelle... à deux dans le chat ! La majorité valide.",
-        "vote_label": "Ont-ils/elles réussi les 10 pâtes ?", "collectif_mode": "duo_chat"
-    },
-    {
-        "id": 25, "type": "collectif", "timer": None, "duo": False,
-        "text": "C'est l'afterwork, tout le monde cite une marque de voiture à tour de rôle dans le chat. Le perdant est licencié.",
-        "instructions": "Dans le chat, une marque chacun à tour de rôle. Celui qui répète ou ne trouve plus est licencié.",
-        "vote_label": "", "collectif_mode": "tour_de_role"
-    },
 ]
-
-
 
 class CreatePartyRequest(BaseModel):
     pseudo: str
