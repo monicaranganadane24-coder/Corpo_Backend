@@ -305,7 +305,6 @@ async def handle_message(code: str, websocket, message: str):
             if not party or not party.turn_order:
                 return
 
-            # Vérifier que c'est bien le tour de ce joueur
             turn_order = json.loads(party.turn_order)
             if party.current_turn < len(turn_order):
                 expected_id = turn_order[party.current_turn]
@@ -315,7 +314,7 @@ async def handle_message(code: str, websocket, message: str):
 
             print(f"🎯 ACTION: {action} | joueur {player_id} ({role}) → cible {target_id}")
 
-            # --- FABIEN : victime des managers ---
+            # --- FABIEN ---
             if action == "manager_victim" and target_id:
                 db.query(Player).filter(Player.party_id == party.id).update({
                     "victim_of_managers": False
@@ -324,7 +323,6 @@ async def handle_message(code: str, websocket, message: str):
                 if target:
                     target.victim_of_managers = True
                     db.commit()
-                    print(f"💀 Victime managers : {target.pseudo}")
 
             # --- CLAIRE : sauver ---
             elif action == "claire_save":
@@ -336,9 +334,8 @@ async def handle_message(code: str, websocket, message: str):
                     ).update({"victim_of_managers": False})
                     claire.has_used_power = True
                     db.commit()
-                    print("💚 Claire a sauvé la victime")
 
-            # --- CLAIRE : licencier quelqu'un ---
+            # --- CLAIRE : licencier ---
             elif action == "claire_fire" and target_id:
                 claire = db.query(Player).filter(Player.id == player_id).first()
                 if claire and not claire.has_used_power:
@@ -351,58 +348,47 @@ async def handle_message(code: str, websocket, message: str):
                         target.victim_of_claire = True
                     claire.has_used_power = True
                     db.commit()
-                    print(f"🔴 Claire licencie : {target.pseudo if target else '?'}")
 
-            # --- PASCAL : inspecter ---
-            # next_turn est appelé quand Pascal envoie "done" après l'alerte
+            # --- PASCAL ---
             elif action == "pascal_inspect" and target_id:
                 target = db.query(Player).filter(Player.id == int(target_id)).first()
                 if target:
                     result = "true" if target.is_manager else "false"
-                    try:
-                        await websocket.send_text(f"pascal_result:{result}:{target.pseudo}")
-                    except:
-                        pass
-                # ⚠️ Pas de next_turn ici — Pascal envoie "done" après l'alerte
+                    await websocket.send_text(f"pascal_result:{result}:{target.pseudo}")
                 return
 
-            # --- STÉPHANE : révélation mutuelle ---
-            # next_turn est appelé quand Stéphane envoie "done" après l'alerte
+            # --- STÉPHANE ---
             elif action == "stephane_reveal" and target_id:
                 stephane = db.query(Player).filter(Player.id == player_id).first()
                 target   = db.query(Player).filter(Player.id == int(target_id)).first()
                 if stephane and target:
-                    try:
-                        await websocket.send_text(f"stephane_result:{target.role}:{target.pseudo}")
-                    except:
-                        pass
+                    await websocket.send_text(f"stephane_result:{target.role}:{target.pseudo}")
                     await send_to_player(code, int(target_id),
                         f"stephane_reveal_target:{stephane.role}:{stephane.pseudo}")
                     if target.role == "Claire":
                         stephane.is_alive = False
                         db.commit()
                         await broadcast(code, f"player_fired:{stephane.pseudo}")
-                # ⚠️ Pas de next_turn ici — Stéphane envoie "done" après l'alerte
                 return
 
-            # --- LA PLANTE : arroseur ---
+            # --- PLANTE ---
             elif action == "plante_water" and target_id:
                 target = db.query(Player).filter(Player.id == int(target_id)).first()
                 if target:
                     await broadcast(code, f"plante_arroseur:{target.pseudo}")
 
-            # --- DENIS : échange d'identité ---
+            # --- DENIS ---
             elif action == "denis_swap" and target_id:
                 denis  = db.query(Player).filter(Player.id == player_id).first()
                 target = db.query(Player).filter(Player.id == int(target_id)).first()
                 if denis and target:
-                    denis.role, target.role             = target.role, denis.role
+                    denis.role, target.role = target.role, denis.role
                     denis.is_manager, target.is_manager = target.is_manager, denis.is_manager
                     db.commit()
                     await send_to_player(code, player_id,     f"new_role:{denis.role}")
                     await send_to_player(code, int(target_id), f"new_role:{target.role}")
 
-            # --- CORENTIN : récupérer le rôle d'un éliminé ---
+            # --- CORENTIN ---
             elif action == "corentin_swap" and target_id:
                 corentin    = db.query(Player).filter(Player.id == player_id).first()
                 dead_player = db.query(Player).filter(Player.id == int(target_id)).first()
@@ -410,19 +396,15 @@ async def handle_message(code: str, websocket, message: str):
                     corentin.role       = dead_player.role
                     corentin.is_manager = dead_player.is_manager
                     db.commit()
-                    try:
-                        await websocket.send_text(f"new_role:{corentin.role}")
-                    except:
-                        pass
+                    await websocket.send_text(f"new_role:{corentin.role}")
 
-            # --- ABDEL : contaminer ---
+            # --- ABDEL ---
             elif action == "abdel_virus" and target_id:
                 target = db.query(Player).filter(Player.id == int(target_id)).first()
                 if target:
                     target.virus_from_abdel = True
                     db.commit()
 
-            # Tous les cas (dont "done") → passer au tour suivant
             await next_turn(code, party, db)
 
         finally:
@@ -430,7 +412,7 @@ async def handle_message(code: str, websocket, message: str):
         return
 
     # ---------------------------------------------------------
-    # DÉCISION DU DÉFI (depuis feedback_defi.html)
+    # DÉCISION DU DÉFI
     # ---------------------------------------------------------
     if msg_type == "defi_decision":
         player_id = int(data.get("player_id", 0))
@@ -443,25 +425,20 @@ async def handle_message(code: str, websocket, message: str):
                 return
 
             if accepted:
-                # 🔥 On mémorise l'origine dans defi_sub_phase avant d'écraser meeting_phase
-                # "running_from_vote" = défi venant du vote → après : next_meeting
-                # "running_from_meeting" = défi venant du meeting → après : feedback
                 origine = "running_from_vote" if party.meeting_phase == "vote_defi" else "running_from_meeting"
                 party.meeting_phase  = "defi_corpo"
                 party.defi_sub_phase = origine
                 db.commit()
                 await broadcast(code, "phase:defi_corpo")
             else:
-                # Refus → éliminer directement
                 victim = db.query(Player).filter(Player.id == player_id).first()
                 if victim:
-                    victim.is_alive              = False
-                    victim.victim_of_managers    = False
-                    victim.victim_of_claire      = False
-                    victim.has_drawn_corpocard   = True
+                    victim.is_alive = False
+                    victim.victim_of_managers = False
+                    victim.victim_of_claire = False
+                    victim.has_drawn_corpocard = True
                     db.commit()
 
-                # Vérif fin de partie
                 alive = db.query(Player).filter(
                     Player.party_id == party.id,
                     Player.is_alive == True
@@ -476,8 +453,6 @@ async def handle_message(code: str, websocket, message: str):
                     await broadcast(code, "game_over:victoire_managers")
                     return
 
-                # Pas de fin → feedback
-                # Lire l'origine avant de modifier
                 came_from_vote = party.defi_sub_phase == "running_from_vote"
                 party.defi_sub_phase = None
 
@@ -494,22 +469,15 @@ async def handle_message(code: str, websocket, message: str):
         return
 
     # ---------------------------------------------------------
-    # CHAT avec filtre de mots vulgaires
+    # CHAT
     # ---------------------------------------------------------
     if msg_type == "chat":
         pseudo       = data.get("pseudo", "?")
         message_text = data.get("message", "").strip()
         if not message_text:
             return
- 
-        MOTS_INTERDITS = [
-            "putain", "merde", "connard", "connasse", "salope", "enculé",
-            "enculer", "encule", "fils de pute", "fdp", "pute", "bâtard",
-            "batard", "nique", "niquer", "bite", "couille", "bordel",
-            "fuck", "shit", "bitch", "asshole", "bastard", "cunt",
-            "motherfucker", "abruti", "imbécile", "imbecile", "crétin",
-            "cretin", "débile", "debile", "ntr"
-        ]
+
+        MOTS_INTERDITS = [...]
         texte_lower = message_text.lower()
         for mot in MOTS_INTERDITS:
             if mot in texte_lower:
@@ -523,8 +491,7 @@ async def handle_message(code: str, websocket, message: str):
                 finally:
                     db.close()
                 return
- 
-        # Vérifier mots Tiffany
+
         db = SessionLocal()
         try:
             party = db.query(Party).filter(Party.code == code).first()
@@ -558,7 +525,25 @@ async def handle_message(code: str, websocket, message: str):
                     return
         finally:
             db.close()
- 
+
         await broadcast(code, f"chat:{pseudo} : {message_text}")
         return
-    
+
+    # ---------------------------------------------------------
+    # FIN DU DÉFI → joueur clique "J'ai terminé"
+    # ---------------------------------------------------------
+    if msg_type == "defi_done":
+        db = SessionLocal()
+        try:
+            party = db.query(Party).filter(Party.code == code).first()
+            if not party:
+                return
+
+            import random
+            outcome = "success" if random.random() < 0.5 else "fail"
+
+            await broadcast(code, f"defi_result:{outcome}")
+
+        finally:
+            db.close()
+        return
