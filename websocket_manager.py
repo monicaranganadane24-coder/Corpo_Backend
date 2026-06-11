@@ -472,7 +472,8 @@ async def handle_message(code: str, websocket, message: str):
                         break
 
                 if mot_interdit_trouve:
-                    coupable = db_tiff.query(Player).filter(Player.pseudo == pseudo).first()
+                    coupable = db_tiff.query(Player).filter(Player.pseudo == pseudo,
+                        Player.party_id == party_tiff.id).first()
                     if coupable and coupable.is_alive:
                         # Afficher le message avant d'éliminer
                         await broadcast(code, f"chat:{pseudo} : {texte}")
