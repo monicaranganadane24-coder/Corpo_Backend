@@ -329,11 +329,6 @@ async def handle_message(code: str, websocket, message: str):
                         await broadcast(code, f"player_fired:{stephane.pseudo}")
                 return
 
-            elif action == "plante_water" and target_id:
-                target = db.query(Player).filter(Player.id == int(target_id)).first()
-                if target:
-                    await broadcast(code, f"plante_arroseur:{target.pseudo}")
-
             elif action == "denis_swap" and target_id:
                 denis  = db.query(Player).filter(Player.id == player_id).first()
                 target = db.query(Player).filter(Player.id == int(target_id)).first()
@@ -344,17 +339,6 @@ async def handle_message(code: str, websocket, message: str):
                     await send_to_player(code, player_id,      f"new_role:{denis.role}")
                     await send_to_player(code, int(target_id), f"new_role:{target.role}")
 
-            elif action == "corentin_swap" and target_id:
-                corentin    = db.query(Player).filter(Player.id == player_id).first()
-                dead_player = db.query(Player).filter(Player.id == int(target_id)).first()
-                if corentin and dead_player:
-                    corentin.role       = dead_player.role
-                    corentin.is_manager = dead_player.is_manager
-                    db.commit()
-                    try:
-                        await websocket.send_text(f"new_role:{corentin.role}")
-                    except:
-                        pass
 
             elif action == "abdel_virus" and target_id:
                 target = db.query(Player).filter(Player.id == int(target_id)).first()
