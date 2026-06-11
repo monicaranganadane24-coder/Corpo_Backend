@@ -183,16 +183,17 @@ async def _end_meeting_async(code: str, party_id: int):
                 return
 
             if victims_with_joker:
-                # Victimes avec joker → défi à tour de rôle
+                # Victimes avec joker → défi direct
                 victim_ids = [v.id for v in victims_with_joker]
                 party.last_eliminated_id = victim_ids[0]
-                party.meeting_phase      = "feedback_defi"
+                party.meeting_phase      = "defi_corpo"
                 party.defi_sub_phase     = "running_from_meeting"
                 party.turn_order         = _json.dumps(victim_ids)
                 party.current_turn       = 0
+                party.current_defi_id    = None  # reset pour tirer un nouveau défi
                 db.commit()
                 print(f"🚨 Victimes avec joker : {[v.pseudo for v in victims_with_joker]}")
-                await broadcast(code, "phase:defi_decision")
+                await launch_defi(code, party, db)
             else:
                 # Toutes éliminées directement → feedback
                 party.meeting_phase      = "feedback"
@@ -217,6 +218,34 @@ async def _end_meeting_async(code: str, party_id: int):
 # ---------------------------------------------------------
 # Gestion des messages entrants WebSocket
 # ---------------------------------------------------------
+
+async def launch_defi(code: str, party, db):
+    """
+    Tire le défi corpo (si pas déjà tiré), le stocke, et envoie
+    'defi_card:<json>' à tous les joueurs → tout le monde va sur defi_corpo.html.
+    """
+    import random as _random
+    import json as _json
+
+    # Import local pour éviter les imports circulaires
+    from routes.partyRoutes import CORPO_CARDS
+
+    # Si un défi est déjà tiré pour ce round → réutiliser
+    if not party.current_defi_id:
+        available = [c for c in CORPO_CARDS if c["type"] != "direct_fail"]
+        card = _random.choice(available)
+        party.current_defi_id = card["id"]
+        db.commit()
+    else:
+        card = next((c for c in CORPO_CARDS if c["id"] == party.current_defi_id), None)
+        if not card:
+            available = [c for c in CORPO_CARDS if c["type"] != "direct_fail"]
+            card = _random.choice(available)
+            party.current_defi_id = card["id"]
+            db.commit()
+
+    await broadcast(code, f"defi_card:{_json.dumps(card)}")
+
 
 async def _launch_next_meeting_ws(code: str, party_id: int):
     """Lance le meeting suivant depuis websocket_manager (sans session DB active)."""
@@ -278,10 +307,14 @@ async def handle_message(code: str, websocket, message: str):
                     await websocket.send_text("phase:meeting_start")
                     await websocket.send_text(f"role:{current_player.role}")
 
-            elif phase in ("feedback_defi",):
-                await websocket.send_text("phase:defi_decision")
-            elif phase == "defi_corpo":
-                await websocket.send_text("phase:defi_corpo")
+            elif phase in ("feedback_defi", "defi_corpo"):
+                # Renvoyer le défi en cours si déjà tiré
+                if party.current_defi_id:
+                    import json as _j
+                    from routes.partyRoutes import CORPO_CARDS
+                    card = next((c for c in CORPO_CARDS if c["id"] == party.current_defi_id), None)
+                    if card:
+                        await websocket.send_text(f"defi_card:{_j.dumps(card)}")
             elif phase == "feedback":
                 await websocket.send_text("phase:feedback")
             elif phase == "vote":
@@ -430,135 +463,99 @@ async def handle_message(code: str, websocket, message: str):
         return
 
     # ---------------------------------------------------------
-    # DÉCISION DU DÉFI (depuis feedback_defi.html)
-    # ---------------------------------------------------------
-    if msg_type == "defi_decision":
-        player_id = int(data.get("player_id", 0))
-        accepted  = data.get("accepted", True)
-
-        db = SessionLocal()
-        try:
-            party = db.query(Party).filter(Party.code == code).first()
-            if not party:
-                return
-
-            if accepted:
-                # 🔥 On mémorise l'origine dans defi_sub_phase avant d'écraser meeting_phase
-                # "running_from_vote" = défi venant du vote → après : next_meeting
-                # "running_from_meeting" = défi venant du meeting → après : feedback
-                origine = "running_from_vote" if party.meeting_phase == "vote_defi" else "running_from_meeting"
-                party.meeting_phase  = "defi_corpo"
-                party.defi_sub_phase = origine
-                db.commit()
-                await broadcast(code, "phase:defi_corpo")
-            else:
-                # Refus → éliminer directement
-                victim = db.query(Player).filter(Player.id == player_id).first()
-                if victim:
-                    victim.is_alive              = False
-                    victim.victim_of_managers    = False
-                    victim.victim_of_claire      = False
-                    victim.has_drawn_corpocard   = True
-                    db.commit()
-
-                # Vérif fin de partie
-                alive = db.query(Player).filter(
-                    Player.party_id == party.id,
-                    Player.is_alive == True
-                ).all()
-                managers = [p for p in alive if p.is_manager]
-                collabs  = [p for p in alive if not p.is_manager]
-
-                if not managers:
-                    await broadcast(code, "game_over:victoire_collabs")
-                    return
-                if not collabs:
-                    await broadcast(code, "game_over:victoire_managers")
-                    return
-
-                # Pas de fin → feedback
-                # Lire l'origine avant de modifier
-                came_from_vote = party.defi_sub_phase == "running_from_vote"
-                party.defi_sub_phase = None
-
-                if came_from_vote:
-                    party.meeting_phase = "vote_defi"
-                    db.commit()
-                    await _launch_next_meeting_ws(code, party.id)
-                else:
-                    party.meeting_phase = "feedback"
-                    db.commit()
-                    await broadcast(code, "phase:feedback:pre_vote")
-        finally:
-            db.close()
-        return
-
-    # ---------------------------------------------------------
     # CHAT avec filtre de mots vulgaires
     # ---------------------------------------------------------
     if msg_type == "chat":
-        pseudo       = data.get("pseudo", "?")
-        message_text = data.get("message", "").strip()
-        if not message_text:
+        pseudo  = data.get("pseudo", "?")
+        texte   = data.get("message", "").strip()
+
+        if not texte:
             return
- 
+
+        # Liste de mots interdits (insensible à la casse)
         MOTS_INTERDITS = [
             "putain", "merde", "connard", "connasse", "salope", "enculé",
             "enculer", "encule", "fils de pute", "fdp", "pute", "bâtard",
-            "batard", "nique", "niquer", "bite", "couille", "bordel",
+            "batard", "pd", "nique", "niquer", "ta gueule", "tg", "con",
+            "conne", "bite", "couille", "couilles", "chier", "chieur",
+            "bordel", "ostie", "câlice", "crisse", "tabarnak", "viarge",
             "fuck", "shit", "bitch", "asshole", "bastard", "cunt",
-            "motherfucker", "abruti", "imbécile", "imbecile", "crétin",
-            "cretin", "débile", "debile", "ntr"
+            "motherfucker", "damn", "idiot", "idiot", "abruti", "imbécile",
+            "imbecile", "crétin", "cretin", "débile", "debile"
         ]
-        texte_lower = message_text.lower()
+
+        texte_lower = texte.lower()
+        mot_trouve  = None
         for mot in MOTS_INTERDITS:
             if mot in texte_lower:
+                mot_trouve = mot
+                break
+
+        if mot_trouve:
+            # Prévenir uniquement l'expéditeur
+            try:
+                # Trouver le player_id de l'expéditeur
                 db = SessionLocal()
-                try:
-                    player = db.query(Player).filter(Player.pseudo == pseudo).first()
-                    if player and code in connections and player.id in connections[code]:
-                        await connections[code][player.id].send_text(
-                            "chat_warning:⚠️ Message bloqué : mot interdit détecté."
-                        )
-                finally:
-                    db.close()
-                return
- 
-        # Vérifier mots Tiffany
-        db = SessionLocal()
+                player = db.query(Player).filter(Player.pseudo == pseudo).first()
+                if player and code in connections and player.id in connections[code]:
+                    await connections[code][player.id].send_text(
+                        f"chat_warning:⚠️ Message bloqué : mot interdit détecté."
+                    )
+                db.close()
+            except:
+                pass
+            return
+
+        # 🔥 Vérifier les mots interdits de Tiffany
+        db_tiff = SessionLocal()
         try:
-            party = db.query(Party).filter(Party.code == code).first()
-            if party and party.tiff_mots_actifs:
-                mots_actifs = json.loads(party.tiff_mots_actifs or "[]")
-                mot_trouve = next((m for m in mots_actifs if m.lower() in texte_lower), None)
-                if mot_trouve:
-                    coupable = db.query(Player).filter(Player.pseudo == pseudo).first()
+            party_tiff = db_tiff.query(Party).filter(Party.code == code).first()
+            if party_tiff and party_tiff.tiff_mots_actifs:
+                import json as _json
+                mots_actifs = _json.loads(party_tiff.tiff_mots_actifs or "[]")
+                texte_lower = texte.lower()
+                mot_interdit_trouve = None
+                for mot in mots_actifs:
+                    if mot.lower() in texte_lower:
+                        mot_interdit_trouve = mot
+                        break
+
+                if mot_interdit_trouve:
+                    coupable = db_tiff.query(Player).filter(Player.pseudo == pseudo).first()
                     if coupable and coupable.is_alive:
-                        await broadcast(code, f"chat:{pseudo} : {message_text}")
-                        await broadcast(code, f"mot_interdit:{pseudo}:{mot_trouve}")
+                        print(f"🚫 {pseudo} a dit le mot interdit '{mot_interdit_trouve}' → licencié !")
+                        await broadcast(code, f"chat:{pseudo} : {texte}")
+                        await broadcast(code, f"mot_interdit:{pseudo}:{mot_interdit_trouve}")
+
                         if not coupable.has_drawn_corpocard:
+                            # A encore son joker → défi direct
                             coupable.victim_of_managers = True
-                            party.last_eliminated_id = coupable.id
-                            party.meeting_phase = "vote_defi"
-                            party.defi_sub_phase = "running_from_vote"
-                            party.turn_order = json.dumps([coupable.id])
-                            party.current_turn = 0
-                            db.commit()
+                            party_tiff.last_eliminated_id = coupable.id
+                            party_tiff.meeting_phase  = "defi_corpo"
+                            party_tiff.defi_sub_phase = "running_from_vote"
+                            party_tiff.turn_order     = _json.dumps([coupable.id])
+                            party_tiff.current_turn   = 0
+                            party_tiff.current_defi_id = None
+                            db_tiff.commit()
                             await asyncio.sleep(2)
-                            await broadcast(code, "phase:defi_decision")
+                            await launch_defi(code, party_tiff, db_tiff)
                         else:
+                            # Joker déjà utilisé → élimination directe
                             coupable.is_alive = False
-                            db.commit()
+                            db_tiff.commit()
                             await broadcast(code, f"player_eliminated_direct:{coupable.pseudo}:{coupable.role}")
-                            alive = db.query(Player).filter(Player.party_id == party.id, Player.is_alive == True).all()
+                            alive = db_tiff.query(Player).filter(
+                                Player.party_id == party_tiff.id, Player.is_alive == True
+                            ).all()
                             if not [p for p in alive if p.is_manager]:
                                 await broadcast(code, "game_over:victoire_collabs")
                             elif not [p for p in alive if not p.is_manager]:
                                 await broadcast(code, "game_over:victoire_managers")
-                    return
+                        db_tiff.close()
+                        return
         finally:
-            db.close()
- 
-        await broadcast(code, f"chat:{pseudo} : {message_text}")
+            try: db_tiff.close()
+            except: pass
+
+        await broadcast(code, f"chat:{pseudo} : {texte}")
         return
-    

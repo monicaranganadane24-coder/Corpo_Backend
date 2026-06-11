@@ -6,7 +6,7 @@ from models.playerModel import Player
 from models.partyModel import Party
 from utils.generatePartyCode import generate_party_code
 from routes.meetingRoutes import start_meeting
-from websocket_manager import notify_party_start, broadcast
+from websocket_manager import notify_party_start, broadcast, launch_defi
 
 from datetime import datetime
 import random
@@ -118,175 +118,19 @@ TIFF_MOTS_DISPONIBLES = [
     "Assertif", "Besoin d'aide sur des sujets ?", "Mobilité interne", "Trust-office",
 ]
 
-# Types de défis :
-# "vote"    → la majorité décide (succès/échec)
-# "direct"  → effet immédiat sans vote
-# "duo"     → avec l'aide d'un autre joueur + vote
-# "collectif" → tout le monde joue + vote
-
+# Quelques défis corpo par défaut (à enrichir)
 CORPO_CARDS = [
-
-    # ══════════════════════════════
-    # 15 DÉFIS INDIVIDUELS
-    # ══════════════════════════════
-
-    {
-        "id": 1, "type": "vote", "timer": 30, "duo": False,
-        "text": "En 30 secondes, pitche ton augmentation salariale.",
-        "instructions": "Convaincs la majorité que tu mérites une augmentation. Si la majorité valide → tu restes !",
-        "vote_label": "Mérite-t-il/elle une augmentation ?"
-    },
-    {
-        "id": 2, "type": "vote", "timer": 30, "duo": False,
-        "text": "En 30 secondes, donne 5 politiques RSE que tu mettrais en place chez Corpo!",
-        "instructions": "Sois convaincant(e) ! La majorité valide ou non.",
-        "vote_label": "Les propositions RSE sont-elles convaincantes ?"
-    },
-    {
-        "id": 3, "type": "vote", "timer": 30, "duo": False,
-        "text": "En 30 secondes, cite 10 mots franglais du monde de l'entreprise.",
-        "instructions": "Synergies, quick wins, roadmap... t'en as d'autres ? La majorité valide.",
-        "vote_label": "A-t-il/elle réussi les 10 mots franglais ?"
-    },
-    {
-        "id": 4, "type": "vote", "timer": 30, "duo": False,
-        "text": "Sais-tu ce que signifie 'assertif' ? En 30 secondes, donne une définition.",
-        "instructions": "C'est pas juste 'confiant en soi'... ou si ? La majorité valide.",
-        "vote_label": "La définition est-elle correcte ?"
-    },
-    {
-        "id": 5, "type": "vote", "timer": 30, "duo": False,
-        "text": "Tu arrives en retard au meeting. En 30 secondes, explique ta mésaventure.",
-        "instructions": "Trouve la meilleure excuse de l'histoire ! Si la majorité valide, tu restes.",
-        "vote_label": "L'excuse est-elle recevable ?"
-    },
-    {
-        "id": 6, "type": "vote", "timer": 30, "duo": False,
-        "text": "En 30 secondes, pitche un post LinkedIn inspirant pour recruter. N'oublie pas les #hashtags !",
-        "instructions": "Sois authentique, bienveillant et disruptif à la fois ! La majorité valide.",
-        "vote_label": "Ce post mérite-t-il des likes ?"
-    },
-    {
-        "id": 7, "type": "vote", "timer": 30, "duo": False,
-        "text": "Sais-tu réellement à quoi sert un Manager ? En 30 secondes, explique.",
-        "instructions": "Prends le temps de réfléchir... La majorité valide.",
-        "vote_label": "L'explication tient-elle la route ?"
-    },
-    {
-        "id": 8, "type": "vote", "timer": 30, "duo": False,
-        "text": "En 30 secondes, décris comment tu vas résoudre la panne d'imprimante.",
-        "instructions": "L'imprimante ne répond plus depuis 3 jours... Si la majorité valide, tu restes.",
-        "vote_label": "La solution est-elle crédible ?"
-    },
-    {
-        "id": 9, "type": "vote", "timer": 30, "duo": False,
-        "text": "En 30 secondes, fais un pitch de création de startup innovante.",
-        "instructions": "L'appli qui va changer le monde, c'est maintenant ! La majorité valide.",
-        "vote_label": "Cette startup mérite-t-elle un financement ?"
-    },
-    {
-        "id": 10, "type": "vote", "timer": 30, "duo": False,
-        "text": "Tu as mis une LV3 sur ton CV ? Parle pendant 30 secondes dans cette langue.",
-        "instructions": "Espéranto, mandarin, klingon... à toi ! La majorité valide.",
-        "vote_label": "La performance linguistique est-elle convaincante ?"
-    },
-    {
-        "id": 11, "type": "vote", "timer": 30, "duo": False,
-        "text": "En 30 secondes, fais une imitation d'une réunion Teams typique qui commence mal.",
-        "instructions": "'T'es sur mute !' 'Je vous entends pas...' Go ! La majorité valide.",
-        "vote_label": "L'imitation est-elle réussie ?"
-    },
-    {
-        "id": 12, "type": "vote", "timer": 30, "duo": True,
-        "text": "En 30 secondes et à l'aide d'un joueur, avoue 10 choses que tu fais quand tu es en télétravail au lieu de travailler.",
-        "instructions": "Netflix, sieste, promenade du chien... À deux on va plus loin ! La majorité valide.",
-        "vote_label": "Ont-ils/elles réussi les 10 aveux ?"
-    },
-    {
-        "id": 13, "type": "vote", "timer": 30, "duo": False,
-        "text": "En 30 secondes, cite 2 citations inspirantes. Si tu réussis, tous les autres font 5 pompes !",
-        "instructions": "Nelson Mandela, Gandhi, ou LinkedIn ? La majorité valide.",
-        "vote_label": "Les citations sont-elles convaincantes ?"
-    },
-    {
-        "id": 14, "type": "direct_fail", "timer": None, "duo": False,
-        "text": "Tu n'as pas validé ta période d'essai. Tu es licencié instantanément !",
-        "instructions": "Pas de défi possible, c'est terminé !",
-        "vote_label": ""
-    },
-    {
-        "id": 15, "type": "direct_special", "special": "become_manager", "timer": None, "duo": False,
-        "text": "Promotion ! Félicitations, tu te transformes en Fabien et intègres l'équipe des Managers. Tout le monde connaît ta nouvelle identité.",
-        "instructions": "Bienvenue du côté obscur !",
-        "vote_label": ""
-    },
-
-    # ══════════════════════════════
-    # 10 DÉFIS COLLECTIFS
-    # ══════════════════════════════
-
-    {
-        "id": 16, "type": "collectif", "timer": None, "duo": False,
-        "text": "C'est l'afterwork ! À tour de rôle dans le chat, citez une marque de bière. Celui qui ne trouve plus est licencié.",
-        "instructions": "Dans le chat, écrivez votre marque à tour de rôle. Le CHO déclare le perdant.",
-        "vote_label": "", "collectif_mode": "tour_de_role"
-    },
-    {
-        "id": 17, "type": "collectif", "timer": None, "duo": False,
-        "text": "À tour de rôle, les joueurs citent un goût de capsule de café. Celui qui n'en trouve plus est licencié.",
-        "instructions": "Ristretto, Volluto, Capriccio... dans le chat ! Le CHO déclare le perdant.",
-        "vote_label": "", "collectif_mode": "tour_de_role"
-    },
-    {
-        "id": 18, "type": "collectif", "timer": None, "duo": False,
-        "text": "Chaque joueur dit combien de pauses clope il fait dans la journée. Celui qui en fait le plus est éliminé.",
-        "instructions": "Tout le monde répond dans le chat. Le CHO déclare le perdant.",
-        "vote_label": "", "collectif_mode": "sondage"
-    },
-    {
-        "id": 19, "type": "collectif", "timer": None, "duo": False,
-        "text": "Chaque joueur dit combien de fois il va aux toilettes par jour. Celui qui y va le plus est éliminé.",
-        "instructions": "Soyez honnêtes... dans le chat ! Le CHO déclare le perdant.",
-        "vote_label": "", "collectif_mode": "sondage"
-    },
-    {
-        "id": 20, "type": "collectif", "timer": 60, "duo": False,
-        "text": "Tout le monde se détend et doit tenir 1 minute en faisant la chaise. Les perdants sont licenciés.",
-        "instructions": "Dos au mur, cuisses parallèles au sol. Ceux qui lâchent avant 1 min sont licenciés. Le CHO déclare les perdants.",
-        "vote_label": "", "collectif_mode": "physique"
-    },
-    {
-        "id": 21, "type": "collectif", "timer": 30, "duo": False,
-        "text": "C'est la fin de l'afterwork, prenez l'ethylotest ! Pendant 30 secondes, passez tous une main sous la jambe et attrapez-vous le nez. Ceux qui lâchent sont licenciés.",
-        "instructions": "Tout le monde joue ! Le CHO déclare les perdants.",
-        "vote_label": "", "collectif_mode": "physique"
-    },
-    {
-        "id": 22, "type": "collectif", "timer": 120, "duo": False,
-        "text": "Toute l'entreprise est proche du burn-out. Fermez les yeux, détendez-vous 2 minutes. Ceux qui rigolent ou parlent sont licenciés.",
-        "instructions": "Silence total ! Le CHO surveille. Ceux qui craquent sont licenciés.",
-        "vote_label": "", "collectif_mode": "silence"
-    },
-    {
-        "id": 23, "type": "collectif", "timer": None, "duo": False,
-        "text": "Networking ou opportunisme ? Tout le monde annonce son nombre de connexions LinkedIn dans le chat. Celui qui en a le plus est licencié.",
-        "instructions": "Répondez dans le chat. Le CHO déclare le perdant.",
-        "vote_label": "", "collectif_mode": "sondage"
-    },
-    {
-        "id": 24, "type": "collectif", "timer": 30, "duo": True,
-        "text": "À l'aide d'un joueur, tu as 30 secondes pour citer 10 formes de pâtes différentes dans le chat.",
-        "instructions": "Penne, fusilli, tagliatelle... à deux dans le chat ! La majorité valide.",
-        "vote_label": "Ont-ils/elles réussi les 10 pâtes ?", "collectif_mode": "duo_chat"
-    },
-    {
-        "id": 25, "type": "collectif", "timer": None, "duo": False,
-        "text": "C'est l'afterwork, tout le monde cite une marque de voiture à tour de rôle dans le chat. Le perdant est licencié.",
-        "instructions": "Dans le chat, une marque chacun à tour de rôle. Celui qui répète ou ne trouve plus est licencié.",
-        "vote_label": "", "collectif_mode": "tour_de_role"
-    },
+    "Fais un pitch de 30 secondes pour sauver ta place dans l'entreprise !",
+    "Imite ton manager préféré pendant 20 secondes.",
+    "Chante le générique d'une pub connue sans rire.",
+    "Convaincs tes collègues que tu mérites une augmentation en 30 secondes.",
+    "Fais semblant d'être en visio avec un client très important pendant 20 secondes.",
+    "Récite l'alphabet à l'envers le plus vite possible.",
+    "Explique ton poste à un enfant de 5 ans en 20 secondes.",
+    "Fais 10 pompes ou paie un café à tout le monde.",
+    "Dis 5 qualités de chaque joueur en 30 secondes.",
+    "Improvise un discours de motivation pour l'équipe en 30 secondes.",
 ]
-
 
 
 class CreatePartyRequest(BaseModel):
@@ -590,12 +434,13 @@ async def submit_vote(request: VoteRequest, db: Session = Depends(get_db)):
                     await broadcast(party.code, f"egalite_defis:{','.join(names)}")
                     await asyncio.sleep(3)
                     party.last_eliminated_id = victims[0].id
-                    party.turn_order   = json.dumps(eliminated_ids)
-                    party.current_turn = 0
-                    party.meeting_phase  = "vote_defi"
+                    party.turn_order     = json.dumps(eliminated_ids)
+                    party.current_turn   = 0
+                    party.meeting_phase  = "defi_corpo"
                     party.defi_sub_phase = "running_from_vote"
+                    party.current_defi_id = None
                     db.commit()
-                    await broadcast(party.code, "phase:defi_decision")
+                    await launch_defi(party.code, party, db)
 
                 elif len(no_joker) == 1 and len(has_joker) >= 1:
                     # Un sans joker → il est éliminé directement
@@ -641,12 +486,13 @@ async def submit_vote(request: VoteRequest, db: Session = Depends(get_db)):
                 await _process_next_in_queue(party.code, party.id, 0, True)
             else:
                 party.last_eliminated_id = first_victim.id
-                party.turn_order   = json.dumps(eliminated_ids)
-                party.current_turn = 0
-                party.meeting_phase  = "vote_defi"
+                party.turn_order     = json.dumps(eliminated_ids)
+                party.current_turn   = 0
+                party.meeting_phase  = "defi_corpo"
                 party.defi_sub_phase = "running_from_vote"
+                party.current_defi_id = None
                 db.commit()
-                await broadcast(party.code, "phase:defi_decision")
+                await launch_defi(party.code, party, db)
 
 
         else:
@@ -680,10 +526,11 @@ async def submit_vote(request: VoteRequest, db: Session = Depends(get_db)):
                 party.last_eliminated_id = first_target_id
                 party.turn_order         = json.dumps(eliminated_ids)
                 party.current_turn       = 0
-                party.meeting_phase      = "vote_defi"
+                party.meeting_phase      = "defi_corpo"
                 party.defi_sub_phase     = "running_from_vote"
+                party.current_defi_id    = None
                 db.commit()
-                await broadcast(party.code, "phase:defi_decision")
+                await launch_defi(party.code, party, db)
 
     return {"message": "Vote enregistré"}
 
@@ -748,31 +595,11 @@ def is_alive(player_id: int, db: Session = Depends(get_db)):
 # ---------------------------------------------------------
 @router.get("/current_corpocard/{code}")
 def get_current_corpocard(code: str, db: Session = Depends(get_db)):
-    """
-    Retourne le défi en cours. Si aucun défi n'est tiré pour ce round,
-    en tire un aléatoirement, le stocke et le retourne.
-    Tous les joueurs appellent cette route → ils reçoivent tous le MÊME défi.
-    """
     party = db.query(Party).filter(Party.code == code).first()
     if not party:
         raise HTTPException(404, "Partie introuvable")
-
-    # Si un défi est déjà tiré pour ce round → retourner le même
-    if party.current_defi_id:
-        card = next((c for c in CORPO_CARDS if c["id"] == party.current_defi_id), None)
-        if card:
-            return card
-
-    # Sinon tirer un nouveau défi aléatoire
-    available = [c for c in CORPO_CARDS if c["type"] != "direct_fail"]
-    if not available:
-        available = CORPO_CARDS
-
-    card = random.choice(available)
-    party.current_defi_id = card["id"]
-    db.commit()
-
-    return card
+    index = (party.meeting_number - 1) % len(CORPO_CARDS)
+    return {"text": CORPO_CARDS[index]}
 
 
 # ---------------------------------------------------------
@@ -829,13 +656,12 @@ async def tiff_choisir_mots(request: TiffMotsRequest, db: Session = Depends(get_
     party.tiff_mots_utilises = json.dumps(utilises)
     db.commit()
 
-    print(f"🔒 Mots interdits actifs (SECRET) : {actifs}")
+    print(f"📢 Mots interdits actifs : {actifs}")
 
-    # 🔥 NE PAS broadcaster — les mots sont SECRETS
-    # Seule confirmation : la route retourne les mots à Tiffany uniquement (via HTTP)
-    # Les autres joueurs ne savent pas quels mots sont interdits
+    # Broadcaster les mots interdits actifs à tous les joueurs
+    await broadcast(request.code, f"tiff_mots:{json.dumps(actifs)}")
 
-    return {"message": "Mots enregistrés en secret !", "mots_actifs": actifs}
+    return {"message": "Mots enregistrés", "mots_actifs": actifs}
 
 
 # ---------------------------------------------------------
@@ -944,10 +770,6 @@ async def defi_vote(request: DefiVoteRequest, db: Session = Depends(get_db)):
             await broadcast(request.party_code, "game_over:victoire_managers")
             return {"message": "Victoire des Managers"}
 
-        # 🔥 Reset le défi — le prochain licencié aura un défi différent
-        party.current_defi_id = None
-        db.commit()
-
         result = "success" if success else "fail"
         await broadcast(request.party_code, f"defi_result:{result}")
 
@@ -1023,10 +845,11 @@ async def next_phase(code: str, db: Session = Depends(get_db)):
             # Joker disponible → proposer le défi
             party.last_eliminated_id = next_victim_id
             party.current_turn       = next_turn_index
-            # Conserver came_from_vote dans defi_sub_phase
+            party.meeting_phase      = "defi_corpo"
             party.defi_sub_phase = "running_from_vote" if came_from_vote else "running_from_meeting"
+            party.current_defi_id    = None
             db.commit()
-            await broadcast(code, "phase:defi_decision")
+            await launch_defi(code, party, db)
 
         return {"message": "Joueur suivant dans la file"}
 
@@ -1076,9 +899,11 @@ async def _process_next_in_queue(code: str, party_id: int, current_index: int, c
             else:
                 party.last_eliminated_id = next_victim_id
                 party.current_turn       = next_index
+                party.meeting_phase      = "defi_corpo"
                 party.defi_sub_phase = "running_from_vote" if came_from_vote else "running_from_meeting"
+                party.current_defi_id    = None
                 db.commit()
-                await broadcast(code, "phase:defi_decision")
+                await launch_defi(code, party, db)
         else:
             # File épuisée → vérifier s'il reste des vivants
             alive_remaining = db.query(Player).filter(
@@ -1121,264 +946,6 @@ async def _process_next_in_queue(code: str, party_id: int, current_index: int, c
     finally:
         db.close()
 
-
-
-
-
-
-
-
-# ---------------------------------------------------------
-# CINDY — Info secrète sur ses voisins (privée)
-# ---------------------------------------------------------
-@router.get("/cindy/voisins/{code}/{player_id}")
-async def cindy_voisins(code: str, player_id: int, db: Session = Depends(get_db)):
-    """
-    Retourne en PRIVÉ à Cindy si l'un de ses voisins est Manager.
-    Le résultat est envoyé via WebSocket privé.
-    """
-    party = db.query(Party).filter(Party.code == code).first()
-    if not party or not party.turn_order:
-        raise HTTPException(404, "Partie introuvable")
-
-    import json as _json
-    turn_order = _json.loads(party.turn_order)
-
-    # Trouver la position de Cindy dans le tour
-    all_players = db.query(Player).filter(
-        Player.party_id == party.id,
-        Player.is_alive == True
-    ).all()
-
-    # Retrouver les IDs dans l'ordre de la table (pas du meeting)
-    cindy = db.query(Player).filter(Player.id == player_id).first()
-    if not cindy:
-        raise HTTPException(404, "Joueur introuvable")
-
-    # Récupérer tous les joueurs vivants triés par ID (ordre de la table)
-    all_alive = sorted(all_players, key=lambda p: p.id)
-    cindy_idx = next((i for i, p in enumerate(all_alive) if p.id == player_id), -1)
-
-    if cindy_idx == -1:
-        return {"has_manager_neighbor": False}
-
-    total = len(all_alive)
-    left  = all_alive[(cindy_idx - 1) % total]
-    right = all_alive[(cindy_idx + 1) % total]
-
-    has_manager = left.is_manager or right.is_manager
-
-    # Envoyer le résultat en PRIVÉ via WebSocket
-    from websocket_manager import connections
-    if code in connections and player_id in connections[code]:
-        msg = "cindy_voisin:oui" if has_manager else "cindy_voisin:non"
-        try:
-            await connections[code][player_id].send_text(msg)
-        except:
-            pass
-
-    return {"has_manager_neighbor": has_manager}
-
-# ---------------------------------------------------------
-# TIRER LE DÉFI (appelé une seule fois par le serveur)
-# Le défi est stocké ET broadcasté à tous les joueurs
-# ---------------------------------------------------------
-@router.post("/draw_defi/{code}")
-async def draw_defi(code: str, db: Session = Depends(get_db)):
-    party = db.query(Party).filter(Party.code == code).first()
-    if not party:
-        raise HTTPException(404, "Partie introuvable")
-
-    # Si déjà tiré pour ce round → retourner le même
-    if party.current_defi_id:
-        card = next((c for c in CORPO_CARDS if c["id"] == party.current_defi_id), None)
-        if card:
-            await broadcast(code, f"defi_card:{json.dumps(card)}")
-            return card
-
-    # Tirer un nouveau défi aléatoire
-    available = [c for c in CORPO_CARDS if c["type"] != "direct_fail"]
-    card = random.choice(available)
-    party.current_defi_id = card["id"]
-    db.commit()
-
-    # Broadcaster le défi à TOUS les joueurs
-    await broadcast(code, f"defi_card:{json.dumps(card)}")
-    return card
-
-# ---------------------------------------------------------
-# COLLECTIF — Le CHO déclare le perdant
-# ---------------------------------------------------------
-class CollectifLoserRequest(BaseModel):
-    party_code: str
-    loser_id: int
-
-@router.post("/collectif_loser")
-async def collectif_loser(request: CollectifLoserRequest, db: Session = Depends(get_db)):
-    party = db.query(Party).filter(Party.code == request.party_code).first()
-    if not party:
-        raise HTTPException(404, "Partie introuvable")
-
-    loser = db.query(Player).filter(Player.id == request.loser_id).first()
-    if not loser:
-        raise HTTPException(404, "Joueur introuvable")
-
-    if not loser.has_drawn_corpocard:
-        # Proposer le défi
-        loser.victim_of_managers = True
-        party.last_eliminated_id = loser.id
-        party.meeting_phase      = "vote_defi"
-        party.defi_sub_phase     = "running_from_vote"
-        party.turn_order         = json.dumps([loser.id])
-        party.current_turn       = 0
-        db.commit()
-        await broadcast(request.party_code, f"player_eliminated_direct:{loser.pseudo}:collectif")
-        await asyncio.sleep(2)
-        await broadcast(request.party_code, "phase:defi_decision")
-    else:
-        loser.is_alive = False
-        db.commit()
-        await broadcast(request.party_code, f"player_eliminated_direct:{loser.pseudo}:{loser.role}")
-
-        alive = db.query(Player).filter(Player.party_id == party.id, Player.is_alive == True).all()
-        if not [p for p in alive if p.is_manager]:
-            await broadcast(request.party_code, "game_over:victoire_collabs")
-        elif not [p for p in alive if not p.is_manager]:
-            await broadcast(request.party_code, "game_over:victoire_managers")
-        else:
-            await _launch_next_meeting(request.party_code, party.id, db)
-
-    # Reset le défi pour le prochain licencié
-    party.current_defi_id = None
-    db.commit()
-    return {"message": "Perdant déclaré"}
-
-
-# ---------------------------------------------------------
-# DÉFI SPÉCIAL — Effets particuliers
-# ---------------------------------------------------------
-class DefiSpecialRequest(BaseModel):
-    party_code: str
-    player_id: int
-    special_type: str
-    target_id: int = None
-
-@router.post("/defi_special")
-async def defi_special(request: DefiSpecialRequest, db: Session = Depends(get_db)):
-    party = db.query(Party).filter(Party.code == request.party_code).first()
-    if not party:
-        raise HTTPException(404, "Partie introuvable")
-
-    player = db.query(Player).filter(Player.id == request.player_id).first()
-    if not player:
-        raise HTTPException(404, "Joueur introuvable")
-
-    stype = request.special_type
-
-    if stype == "become_manager":
-        # Le joueur rejoint les managers
-        player.is_manager = True
-        player.role       = "Fabien"
-        player.is_alive   = True
-        player.has_drawn_corpocard = True
-        db.commit()
-        await broadcast(request.party_code, f"player_became_manager:{player.pseudo}")
-        await asyncio.sleep(3)
-        await _end_special_defi(request.party_code, party, db)
-
-    elif stype == "skip_meeting":
-        # Revient au prochain meeting — reste en jeu
-        player.is_alive = True
-        player.has_drawn_corpocard = True
-        db.commit()
-        await broadcast(request.party_code, f"player_skip_meeting:{player.pseudo}")
-        await asyncio.sleep(2)
-        await _end_special_defi(request.party_code, party, db)
-
-    elif stype == "contaminate_abdel":
-        # Contaminé par Abdel
-        player.virus_from_abdel = True
-        player.is_alive = True
-        player.has_drawn_corpocard = True
-        db.commit()
-        await broadcast(request.party_code, f"player_contaminated:{player.pseudo}")
-        await asyncio.sleep(2)
-        await _end_special_defi(request.party_code, party, db)
-
-    elif stype == "designate_victim":
-        # Désigne une autre victime à sa place
-        if not request.target_id:
-            raise HTTPException(400, "target_id requis")
-        target = db.query(Player).filter(Player.id == request.target_id).first()
-        if not target:
-            raise HTTPException(404, "Cible introuvable")
-
-        player.is_alive = True
-        player.has_drawn_corpocard = True
-
-        if not target.has_drawn_corpocard:
-            target.victim_of_managers = True
-            party.last_eliminated_id  = target.id
-            party.meeting_phase       = "vote_defi"
-            party.defi_sub_phase      = "running_from_vote"
-            party.turn_order          = json.dumps([target.id])
-            party.current_turn        = 0
-            db.commit()
-            await broadcast(request.party_code, f"player_designated:{player.pseudo}:{target.pseudo}")
-            await asyncio.sleep(2)
-            await broadcast(request.party_code, "phase:defi_decision")
-        else:
-            target.is_alive = False
-            db.commit()
-            await broadcast(request.party_code, f"player_eliminated_direct:{target.pseudo}:{target.role}")
-            await asyncio.sleep(2)
-            await _end_special_defi(request.party_code, party, db)
-
-    elif stype == "cumul_roles":
-        # Attribuer un 2ème rôle aléatoire
-        current_roles = [p.role for p in db.query(Player).filter(Player.party_id == party.id).all()]
-        available_roles = [r for r in ALL_ROLES if r["name"] not in current_roles]
-        if available_roles:
-            new_role = random.choice(available_roles)
-            player.last_role = new_role["name"]  # Stocker comme rôle secondaire
-        player.is_alive = True
-        player.has_drawn_corpocard = True
-        db.commit()
-        await broadcast(request.party_code, f"player_cumul_roles:{player.pseudo}:{player.last_role}")
-        await asyncio.sleep(2)
-        await _end_special_defi(request.party_code, party, db)
-
-    return {"message": "Effet spécial appliqué"}
-
-
-async def _end_special_defi(code: str, party, db):
-    """Après un défi spécial, continuer le flux normal."""
-    came_from_vote = party.defi_sub_phase == "running_from_vote"
-
-    # Nettoyer
-    db.query(Player).filter(Player.party_id == party.id).update({
-        "victim_of_managers": False, "victim_of_claire": False
-    })
-    party.last_eliminated_id = None
-    party.defi_sub_phase     = None
-
-    alive = db.query(Player).filter(Player.party_id == party.id, Player.is_alive == True).all()
-    if not [p for p in alive if p.is_manager]:
-        db.commit()
-        await broadcast(code, "game_over:victoire_collabs")
-        return
-    if not [p for p in alive if not p.is_manager]:
-        db.commit()
-        await broadcast(code, "game_over:victoire_managers")
-        return
-
-    if came_from_vote:
-        db.commit()
-        await _launch_next_meeting(code, party.id, db)
-    else:
-        party.meeting_phase = "feedback"
-        db.commit()
-        await broadcast(code, "phase:feedback:pre_vote")
 
 async def _launch_next_meeting(code: str, party_id: int, db: Session):
     """Reset la partie et lance le meeting suivant."""

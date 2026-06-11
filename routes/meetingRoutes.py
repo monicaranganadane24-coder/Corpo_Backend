@@ -144,11 +144,13 @@ async def set_phase_vote(code: str, db: Session = Depends(get_db)):
 
     if victim:
         party.last_eliminated_id = victim.id
-        party.meeting_phase      = "feedback_defi"
-        party.defi_sub_phase     = "decision"
+        party.meeting_phase      = "defi_corpo"
+        party.defi_sub_phase     = "running_from_meeting"
+        party.current_defi_id    = None
         db.commit()
-        print(f"⚠️ Victime du meeting vers défi : {victim.pseudo}")
-        await broadcast(code, "phase:defi_decision")
+        print(f"⚠️ Victime du meeting vers défi direct : {victim.pseudo}")
+        from websocket_manager import launch_defi as _launch_defi
+        await _launch_defi(code, party, db)
         return {"message": f"Victime {victim.pseudo} → défi", "has_victim": True}
 
     # Pas de victime → vote global
