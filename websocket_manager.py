@@ -329,6 +329,11 @@ async def handle_message(code: str, websocket, message: str):
                         await broadcast(code, f"player_fired:{stephane.pseudo}")
                 return
 
+            elif action == "plante_water" and target_id:
+                target = db.query(Player).filter(Player.id == int(target_id)).first()
+                if target:
+                    await broadcast(code, f"plante_arroseur:{target.pseudo}")
+
             elif action == "denis_swap" and target_id:
                 denis  = db.query(Player).filter(Player.id == player_id).first()
                 target = db.query(Player).filter(Player.id == int(target_id)).first()
@@ -339,6 +344,17 @@ async def handle_message(code: str, websocket, message: str):
                     await send_to_player(code, player_id,      f"new_role:{denis.role}")
                     await send_to_player(code, int(target_id), f"new_role:{target.role}")
 
+            elif action == "corentin_swap" and target_id:
+                corentin    = db.query(Player).filter(Player.id == player_id).first()
+                dead_player = db.query(Player).filter(Player.id == int(target_id)).first()
+                if corentin and dead_player:
+                    corentin.role       = dead_player.role
+                    corentin.is_manager = dead_player.is_manager
+                    db.commit()
+                    try:
+                        await websocket.send_text(f"new_role:{corentin.role}")
+                    except:
+                        pass
 
             elif action == "abdel_virus" and target_id:
                 target = db.query(Player).filter(Player.id == int(target_id)).first()
@@ -472,37 +488,29 @@ async def handle_message(code: str, websocket, message: str):
                         break
 
                 if mot_interdit_trouve:
-                    coupable = db_tiff.query(Player).filter(Player.pseudo == pseudo,
-                        Player.party_id == party_tiff.id).first()
+                    coupable = db_tiff.query(Player).filter(Player.pseudo == pseudo).first()
                     if coupable and coupable.is_alive:
                         # Afficher le message avant d'éliminer
                         await broadcast(code, f"chat:{pseudo} : {texte}")
                         await broadcast(code, f"mot_interdit:{pseudo}:{mot_interdit_trouve}")
 
-                        if not coupable.has_drawn_corpocard:
-                            # Joker dispo → défi corpo
-                            coupable.victim_of_managers   = True
-                            party_tiff.last_eliminated_id = coupable.id
-                            party_tiff.meeting_phase      = "vote_defi"
-                            party_tiff.defi_sub_phase     = "running_from_vote"
-                            party_tiff.turn_order         = _json.dumps([coupable.id])
-                            party_tiff.current_turn       = 0
-                            db_tiff.commit()
-                            await asyncio.sleep(2)
-                            await broadcast(code, "phase:defi_decision")
-                        else:
-                            # Joker déjà utilisé → licenciement direct
-                            coupable.is_alive = False
-                            db_tiff.commit()
-                            await broadcast(code, f"player_eliminated_direct:{coupable.pseudo}:{coupable.role}")
-                            alive = db_tiff.query(Player).filter(
-                                Player.party_id == party_tiff.id,
-                                Player.is_alive == True
-                            ).all()
-                            if not [p for p in alive if p.is_manager]:
-                                await broadcast(code, "game_over:victoire_collabs")
-                            elif not [p for p in alive if not p.is_manager]:
-                                await broadcast(code, "game_over:victoire_managers")
+                        # 🔥 Licenciement DIRECT — joker ou pas, c'est fini !
+                        coupable.is_alive = False
+                        coupable.has_drawn_corpocard = True
+                        db_tiff.commit()
+
+                        await asyncio.sleep(1)
+                        await broadcast(code, f"player_eliminated_direct:{coupable.pseudo}:{coupable.role}")
+
+                        # Vérif fin de partie
+                        alive = db_tiff.query(Player).filter(
+                            Player.party_id == party_tiff.id,
+                            Player.is_alive == True
+                        ).all()
+                        if not [p for p in alive if p.is_manager]:
+                            await broadcast(code, "game_over:victoire_collabs")
+                        elif not [p for p in alive if not p.is_manager]:
+                            await broadcast(code, "game_over:victoire_managers")
                     return  # Ne pas broadcaster une 2ème fois
         finally:
             db_tiff.close()
