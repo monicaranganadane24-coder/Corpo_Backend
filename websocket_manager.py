@@ -490,34 +490,44 @@ async def handle_message(code: str, websocket, message: str):
                 if mot_interdit_trouve:
                     coupable = db_tiff.query(Player).filter(Player.pseudo == pseudo).first()
                     if coupable and coupable.is_alive:
-                        # Afficher le message avant d'éliminer
                         await broadcast(code, f"chat:{pseudo} : {texte}")
                         await broadcast(code, f"mot_interdit:{pseudo}:{mot_interdit_trouve}")
 
-                        # 🔥 Licenciement DIRECT — joker ou pas, c'est fini !
-                        coupable.is_alive            = False
-                        coupable.has_drawn_corpocard = True
+                        if not coupable.has_drawn_corpocard:
+                            # Joker dispo → défi corpo, et APRES le défi → feedback
+                            coupable.victim_of_managers       = True
+                            party_tiff.last_eliminated_id     = coupable.id
+                            party_tiff.meeting_phase          = "vote_defi"
+                            party_tiff.defi_sub_phase         = "running_from_meeting"  # 🔥 feedback après
+                            party_tiff.turn_order             = _json.dumps([coupable.id])
+                            party_tiff.current_turn           = 0
+                            party_tiff.current_defi_id        = None
+                            db_tiff.commit()
+                            await asyncio.sleep(2)
+                            await broadcast(code, "phase:defi_decision")
+                        else:
+                            # Joker déjà utilisé → élimination directe + retour feedback
+                            coupable.is_alive                 = False
+                            party_tiff.last_eliminated_id     = coupable.id
+                            party_tiff.meeting_phase          = "feedback"
+                            party_tiff.defi_sub_phase         = None
+                            party_tiff.turn_order             = None
+                            party_tiff.current_defi_id        = None
+                            db_tiff.commit()
+                            await asyncio.sleep(1)
+                            await broadcast(code, f"player_eliminated_direct:{coupable.pseudo}:{coupable.role}")
 
-                        # 🔥 Nettoyer la phase pour ne pas re-déclencher l'ancien défi
-                        party_tiff.last_eliminated_id = coupable.id
-                        party_tiff.meeting_phase      = "feedback"
-                        party_tiff.defi_sub_phase     = None
-                        party_tiff.turn_order         = None
-                        party_tiff.current_defi_id    = None
-                        db_tiff.commit()
-
-                        await asyncio.sleep(1)
-                        await broadcast(code, f"player_eliminated_direct:{coupable.pseudo}:{coupable.role}")
-
-                        # Vérif fin de partie
-                        alive = db_tiff.query(Player).filter(
-                            Player.party_id == party_tiff.id,
-                            Player.is_alive == True
-                        ).all()
-                        if not [p for p in alive if p.is_manager]:
-                            await broadcast(code, "game_over:victoire_collabs")
-                        elif not [p for p in alive if not p.is_manager]:
-                            await broadcast(code, "game_over:victoire_managers")
+                            # Vérif fin de partie
+                            alive = db_tiff.query(Player).filter(
+                                Player.party_id == party_tiff.id,
+                                Player.is_alive == True
+                            ).all()
+                            if not [p for p in alive if p.is_manager]:
+                                await broadcast(code, "game_over:victoire_collabs")
+                            elif not [p for p in alive if not p.is_manager]:
+                                await broadcast(code, "game_over:victoire_managers")
+                            else:
+                                await broadcast(code, "phase:feedback:pre_vote")
                     return  # Ne pas broadcaster une 2ème fois
         finally:
             db_tiff.close()
