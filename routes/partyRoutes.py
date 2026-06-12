@@ -28,7 +28,18 @@ ALL_ROLES = [
         "role_meeting": "Tu peux sauver la victime des Managers ou en désigner une autre. Tu ne peux utiliser ce pouvoir qu'UNE seule fois dans toute la partie.",
         "cliches": ["On va co-construire ensemble !", "Empower Human to bridge the gap.", "Je suis là pour toi.", "On a une politique de bienveillance.", "Le sondage anonyme était vraiment anonyme."]
     },
-
+    {
+        "name": "La Plante", "title": "Plante Verte", "team": "Collaborateurs", "image": "plante.png",
+        "description": "Belle et verdoyante de prime abord, elle survit au café froid, à la clim glaciale et à deux mois d'abandon. Une vraie warrior du bureau.",
+        "role_meeting": "Tu désignes un joueur qui devra t'arroser à chaque tour. Si ton arroseur est licencié, tu en choisis un nouveau au tour suivant.",
+        "cliches": ["*pousse silencieusement*", "Je suis le seul être vivant ici qui ne se plaint pas.", "Arrosez-moi, c'est tout ce que je demande.", "Je survis à tout, même à vous.", "Un peu d'eau et je suis au top."]
+    },
+    {
+        "name": "Benjamin", "title": "Consultant", "team": "Collaborateurs", "image": "benjamin.png",
+        "description": "Champion de la consommation de café, il parle en franglais et personne ne comprend ce qu'il fait. Il a fait un MOOC à Harvard pour booster son CV et duper les RH.",
+        "role_meeting": "Lorsque le CHO t'appelle, tu ronfles très fort puis tu te rendors. C'est tout.",
+        "cliches": ["Il faut créer des synergies !", "J'ai benchmarké la situation.", "Let's circle back on that.", "On est en train de disrupter le marché.", "J'ai fait un MOOC à Harvard sur ça."]
+    },
     {
         "name": "Pascal", "title": "Futur Retraité", "team": "Collaborateurs", "image": "pascal.png",
         "description": "Il part à la retraite dans 2 ans et il est invirable. Il a fait toute sa carrière chez Corpo! et une chose est sûre : 'c'était mieux avant'.",
@@ -59,7 +70,12 @@ ALL_ROLES = [
         "role_meeting": "Tu peux échanger ton identité avec un autre joueur. Vous découvrez vos nouveaux rôles en secret.",
         "cliches": ["C'est dans le budget.", "J'ai verrouillé le fichier Excel.", "Les chiffres ne mentent pas.", "Il y a des ajustements à prévoir.", "Toujours plus de CA, moins de croissance."]
     },
-
+    {
+        "name": "Corentin", "title": "Stagiaire", "team": "Collaborateurs", "image": "corentin.png",
+        "description": "Plein d'énergie et d'optimisme naïf, il veut 'disrupter le modèle'. Il part en dernier le vendredi dans l'espoir de décrocher un CDI.",
+        "role_meeting": "Tu peux prendre le rôle d'un joueur éliminé et réincarner son personnage au tour suivant.",
+        "cliches": ["Je suis en mode exploratoire !", "Vous pensez qu'il y a un CDI possible ?", "J'ai pris des notes dans mon carnet Corpo!", "Je suis motivé à 200% !", "C'est exactement ce que je voulais faire."]
+    },
     {
         "name": "Abdel", "title": "Support IT", "team": "Collaborateurs", "image": "abdel.png",
         "description": "La colonne vertébrale invisible de l'entreprise. Il règle tout avec un calme olympien. Mais t'as ouvert un ticket avant de venir le voir ?",
@@ -188,21 +204,21 @@ CORPO_CARDS = [
     },
     {
         "id": 13, "type": "vote", "timer": 30, "duo": False,
-        "text": "En 30 secondes, cite 2 citations inspirantes !",
+        "text": "En 30 secondes, cite 2 citations inspirantes. Si tu réussis, tous les autres font 5 pompes !",
         "instructions": "Nelson Mandela, Gandhi, ou LinkedIn ? La majorité valide.",
         "vote_label": "Les citations sont-elles convaincantes ?"
     },
     {
-        "id": 14, "type": "vote", "timer": 30, "duo": False,
-        "text": "En 30 secondes, cite les 2 gros mensonges de bureau !",
-        "instructions": "",
-        "vote_label": "Les mensonges sont-ils convaincants ?"
+        "id": 14, "type": "direct_fail", "timer": None, "duo": False,
+        "text": "Tu n'as pas validé ta période d'essai. Tu es licencié instantanément !",
+        "instructions": "Pas de défi possible, c'est terminé !",
+        "vote_label": ""
     },
     {
-        "id": 15, "type": "vote", "timer": 30, "duo": False,
-        "text": "Tu as 30 secondes. Quel défaut acceptes-tu le plus facilement ?",
-        "instructions": "Des vraies défauts acceptables !",
-        "vote_label": "Les défauts sont-ils convaincants ?"
+        "id": 15, "type": "direct_special", "special": "become_manager", "timer": None, "duo": False,
+        "text": "Promotion ! Félicitations, tu te transformes en Fabien et intègres l'équipe des Managers. Tout le monde connaît ta nouvelle identité.",
+        "instructions": "Bienvenue du côté obscur !",
+        "vote_label": ""
     },
 
 ]
