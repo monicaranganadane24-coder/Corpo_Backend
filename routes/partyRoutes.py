@@ -963,7 +963,7 @@ async def next_phase(code: str, db: Session = Depends(get_db)):
     else:
         party.meeting_phase = "feedback"
         db.commit()
-        await broadcast(code, "phase:feedback")
+        await broadcast(code, "phase:feedback:pre_vote")
 
     return {"message": "Phase suivante déclenchée"}
 
