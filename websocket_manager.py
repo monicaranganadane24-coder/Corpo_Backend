@@ -495,8 +495,15 @@ async def handle_message(code: str, websocket, message: str):
                         await broadcast(code, f"mot_interdit:{pseudo}:{mot_interdit_trouve}")
 
                         # 🔥 Licenciement DIRECT — joker ou pas, c'est fini !
-                        coupable.is_alive = False
+                        coupable.is_alive            = False
                         coupable.has_drawn_corpocard = True
+
+                        # 🔥 Nettoyer la phase pour ne pas re-déclencher l'ancien défi
+                        party_tiff.last_eliminated_id = coupable.id
+                        party_tiff.meeting_phase      = "feedback"
+                        party_tiff.defi_sub_phase     = None
+                        party_tiff.turn_order         = None
+                        party_tiff.current_defi_id    = None
                         db_tiff.commit()
 
                         await asyncio.sleep(1)
