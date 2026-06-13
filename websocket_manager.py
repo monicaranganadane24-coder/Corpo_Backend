@@ -382,7 +382,8 @@ async def handle_message(code: str, websocket, message: str):
                 return
 
             if accepted:
-                origine = "running_from_vote" if party.meeting_phase == "vote_defi" else "running_from_meeting"
+                # APRÈS (correct)
+                origine = party.defi_sub_phase if party.defi_sub_phase in ("running_from_vote", "running_from_meeting") else "running_from_meeting"
                 party.meeting_phase  = "defi_corpo"
                 party.defi_sub_phase = origine
                 db.commit()
