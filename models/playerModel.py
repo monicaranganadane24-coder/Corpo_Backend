@@ -25,6 +25,7 @@ class Player(Base):
     victim_of_managers = Column(Boolean, default=False)
     victim_of_claire = Column(Boolean, default=False)
     virus_from_abdel = Column(Boolean, default=False)
+    fired_by_stephane = Column(Boolean, default=False)
 
     left_neighbor_id = Column(Integer, nullable=True)
     right_neighbor_id = Column(Integer, nullable=True)
