@@ -10,8 +10,8 @@ import asyncio
 router = APIRouter(prefix="/meeting", tags=["Meeting"])
 
 ORDER_MEETING_1 = [
-    "Cindy", "Fabien",
-    "Claire", "Tiff", "Pascal", "Stéphane"
+    "Cindy", "Denis",
+    "Fabien", "Claire", "Tiff", "Pascal", "Stéphane", "Abdel"
 ]
 
 ORDER_MEETING_2PLUS = [
