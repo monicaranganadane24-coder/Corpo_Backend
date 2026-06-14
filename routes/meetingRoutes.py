@@ -84,6 +84,22 @@ async def start_meeting(code: str, db: Session):
 
     # 🔥 On envoie l’ordre complet du meeting au front
     await broadcast(code, "meeting_order:" + ",".join(ordre_meeting))
+    
+    # 🔥 Pouvoir de Cindy : vérifier si un voisin est manager
+    if "Cindy" in ordre_meeting:
+        idx = ordre_meeting.index("Cindy")
+        left_role  = ordre_meeting[(idx - 1) % len(ordre_meeting)]
+        right_role = ordre_meeting[(idx + 1) % len(ordre_meeting)]
+
+        left_player  = roles_present[left_role]
+        right_player = roles_present[right_role]
+
+        info = "yes" if left_player.is_manager or right_player.is_manager else "no"
+
+    # Envoyer l’info UNIQUEMENT à Cindy
+        from websocket_manager import send_to_player
+        await send_to_player(code, roles_present["Cindy"].id, f"cindy_info:{info}")
+
 
     first_player = roles_present[ordre_meeting[0]]
     print(f"🎯 Premier joueur : {first_player.role}")
