@@ -507,7 +507,7 @@ async def handle_message(code: str, websocket, message: str):
             "batard", "nique", "niquer", "bite", "couille", "couilles",
             "chier", "chieur", "bordel", "fuck", "shit", "bitch", "asshole",
             "bastard", "cunt", "motherfucker", "abruti", "imbécile",
-            "crétin", "débile", "ntr", "tg", "nique ta mère", "ntm", "nique ta grand-mère", "ntgm",
+            "crétin", "débile", "ntr", "tg", "nique ta mère", "ntm", "nique ta grand-mère", "ntgm"
         ]
 
         for mot in MOTS_VULGAIRES:

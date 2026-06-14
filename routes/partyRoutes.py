@@ -438,12 +438,31 @@ async def start_party(party_id: int, db: Session = Depends(get_db)):
     await notify_party_start(party_code)
 
     # Attendre que les joueurs voient leur rôle (15s sur decouverte_role.html)
+    # Attendre que les joueurs voient leur rôle (15s sur decouverte_role.html)
     await asyncio.sleep(18)
+
+# 🔥 Attendre que TOUS les joueurs aient reçu leur rôle
+    while True:
+        players = db.query(Player).filter(Player.party_id == party_id).all()
+        if all(p.role for p in players):
+            break
+        await asyncio.sleep(0.2)
+
+# 🔥 Attendre que TOUS les joueurs soient connectés au WebSocket
+    from websocket_manager import connections
+    players = db.query(Player).filter(Player.party_id == party_id).all()   # ✔ IMPORTANT
+    while True:
+        connected = len(connections.get(party.code, {}))
+        if connected >= len(players):
+            break
+        await asyncio.sleep(0.2)
 
     db_fresh = SessionLocal()
     try:
         print(f"🚀 Lancement du meeting pour {party_code}")
         await start_meeting(party_code, db_fresh)
+
+
     except Exception as e:
         print(f"❌ Erreur start_meeting : {e}")
     finally:

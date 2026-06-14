@@ -16,6 +16,7 @@ ORDER_MEETING_1 = [
     "Fabien", "Claire", "Tiff", "Pascal", "Stéphane", "Abdel"
 ]
 
+
 ORDER_MEETING_2PLUS = [
     "Cindy", "Denis",
     "Fabien", "Claire", "Tiff", "Pascal", "Stéphane", "Abdel"
