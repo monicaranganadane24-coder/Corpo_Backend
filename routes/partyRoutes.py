@@ -612,6 +612,10 @@ async def submit_vote(request: VoteRequest, db: Session = Depends(get_db)):
 
                 await broadcast(party.code, f"player_eliminated_direct:{victim.pseudo}:{victim.role}")
                 await asyncio.sleep(5)
+                # 🔥 Si Abdel éliminé directement → traiter les infectés
+                if victim.role == "Abdel":
+                    await _handle_abdel_eliminated(party.code, party, victim, db)
+                    return {"message": "Abdel éliminé direct — infectés traités"}
                 await _launch_next_meeting(party.code, party.id, db)
             else:
                 # Joker disponible → proposer le défi
@@ -982,7 +986,8 @@ async def next_phase(code: str, db: Session = Depends(get_db)):
     # File épuisée → passer à la phase suivante
     db.query(Player).filter(Player.party_id == party.id).update({
         "victim_of_managers": False,
-        "victim_of_claire": False
+        "victim_of_claire": False,
+        "fired_by_stephane":  False,
     })
     party.last_eliminated_id = None
     party.turn_order         = None
@@ -1055,7 +1060,9 @@ async def _process_next_in_queue(code: str, party_id: int, current_index: int, c
 
             db.query(Player).filter(Player.party_id == party_id).update({
                 "victim_of_managers": False,
-                "victim_of_claire": False
+                "victim_of_claire": False,
+                "fired_by_stephane":  False,
+
             })
             party.last_eliminated_id = None
             party.turn_order         = None
