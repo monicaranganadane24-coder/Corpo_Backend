@@ -902,10 +902,6 @@ async def next_phase(code: str, db: Session = Depends(get_db)):
     if not alive_collabs:
         await broadcast(code, "game_over:victoire_managers")
         return {"message": "Victoire des Managers"}
-    
-         # 🔥 Verrou anti-doublon : si defi_sub_phase est déjà None, c'est déjà traité
-    if party.defi_sub_phase is None and party.meeting_phase in ("waiting", "meeting", "feedback"):
-        return {"message": "Déjà traité"}
 
     # 🔥 Lire l'origine AVANT de modifier quoi que ce soit
     came_from_vote = party.defi_sub_phase == "running_from_vote"
