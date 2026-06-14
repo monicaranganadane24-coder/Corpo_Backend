@@ -463,6 +463,8 @@ async def handle_message(code: str, websocket, message: str):
                     await _launch_next_meeting_ws(code, party.id)
                 else:
                     party.meeting_phase = "feedback"
+                    print("ACCEPT DEFI")
+                    print("defi_sub_phase AVANT =", party.defi_sub_phase)
                     db.commit()
                     await broadcast(code, "phase:feedback:pre_vote")
         finally:

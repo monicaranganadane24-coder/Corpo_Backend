@@ -891,6 +891,12 @@ async def next_phase(code: str, db: Session = Depends(get_db)):
     - Si le défi venait du VOTE → meeting suivant ensuite
     """
     party = db.query(Party).filter(Party.code == code).first()
+    print("========== NEXT_PHASE ==========")
+    print("meeting_phase =", party.meeting_phase)
+    print("defi_sub_phase =", party.defi_sub_phase)
+    print("turn_order =", party.turn_order)
+    print("current_turn =", party.current_turn)
+    print("================================")
     if not party:
         raise HTTPException(404, "Partie introuvable")
 
