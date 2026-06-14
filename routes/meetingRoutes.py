@@ -1,5 +1,3 @@
-import code
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database.connection import get_db, SessionLocal
@@ -85,9 +83,45 @@ async def start_meeting(code: str, db: Session):
     # 🔥 On envoie l’ordre complet du meeting au front
     await broadcast(code, "meeting_order:" + ",".join(ordre_meeting))
 
+
     first_player = roles_present[ordre_meeting[0]]
     print(f"🎯 Premier joueur : {first_player.role}")
     await broadcast(code, f"role:{first_player.role}")
+
+# Pouvoir de Cindy dès le premier tour
+    if first_player.role == "Cindy":
+
+    # Utilise les voisins réels de la table
+        all_alive = sorted(players, key=lambda p: p.id)
+
+        cindy_idx = next(
+            (i for i, p in enumerate(all_alive) if p.id == first_player.id),
+            -1
+        )
+
+        if cindy_idx != -1:
+            total = len(all_alive)
+
+            left_player = all_alive[(cindy_idx - 1) % total]
+            right_player = all_alive[(cindy_idx + 1) % total]
+
+            info = (
+                "oui"
+                if left_player.is_manager or right_player.is_manager
+                else "non"
+            )
+
+            print(
+                f"👀 Cindy ({first_player.pseudo}) : "
+                f"voisins = {left_player.pseudo}, {right_player.pseudo} "
+                f"=> {info}"
+            )
+
+            await send_to_player(
+                code,
+                first_player.id,
+                f"cindy_voisin:{info}"
+            )
 
     # Lancer le timer auto pour le premier tour
     _schedule_turn_timer(code, 0)
