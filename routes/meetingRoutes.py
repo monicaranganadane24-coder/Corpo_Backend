@@ -91,7 +91,8 @@ async def start_meeting(code: str, db: Session):
 # Pouvoir de Cindy dès le premier tour
     if first_player.role == "Cindy":
 
-    # Utilise les voisins réels de la table
+        print("=== DEBUG CINDY ===")
+
         all_alive = sorted(players, key=lambda p: p.id)
 
         cindy_idx = next(
@@ -99,11 +100,16 @@ async def start_meeting(code: str, db: Session):
             -1
         )
 
+        print("Index Cindy :", cindy_idx)
+
         if cindy_idx != -1:
             total = len(all_alive)
 
             left_player = all_alive[(cindy_idx - 1) % total]
             right_player = all_alive[(cindy_idx + 1) % total]
+
+            print("Voisin gauche :", left_player.pseudo, left_player.is_manager)
+            print("Voisin droite :", right_player.pseudo, right_player.is_manager)
 
             info = (
                 "oui"
@@ -111,17 +117,15 @@ async def start_meeting(code: str, db: Session):
                 else "non"
             )
 
-            print(
-                f"👀 Cindy ({first_player.pseudo}) : "
-                f"voisins = {left_player.pseudo}, {right_player.pseudo} "
-                f"=> {info}"
-            )
+            print("INFO =", info)
 
             await send_to_player(
                 code,
                 first_player.id,
                 f"cindy_voisin:{info}"
             )
+
+            print("MESSAGE ENVOYE A CINDY")
 
     # Lancer le timer auto pour le premier tour
     _schedule_turn_timer(code, 0)
