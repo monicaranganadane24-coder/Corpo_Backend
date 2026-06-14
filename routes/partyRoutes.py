@@ -421,6 +421,7 @@ async def start_party(party_id: int, db: Session = Depends(get_db)):
         player.victim_of_managers = False
         player.victim_of_claire = False
         player.virus_from_abdel = False
+        player.fired_by_stephane = False  # 🔥 ajouter cette ligne
         player.revealed_to = None
 
     for player, role in zip(players, chosen):
@@ -849,6 +850,11 @@ async def defi_vote(request: DefiVoteRequest, db: Session = Depends(get_db)):
             eliminated.victim_of_claire   = False
             print(f"{'✅' if success else '❌'} Défi {'réussi' if success else 'échoué'} pour {eliminated.pseudo}")
         db.commit()
+        
+        # 🔥 Si Abdel est éliminé → traiter les infectés
+        if eliminated and not eliminated.is_alive and eliminated.role == "Abdel":
+            await _handle_abdel_eliminated(request.party_code, party, eliminated, db)
+            return {"message": "Abdel éliminé — infectés traités"}
 
         # Vérif fin de partie
         alive_after    = db.query(Player).filter(Player.party_id == party.id, Player.is_alive == True).all()
@@ -1314,7 +1320,9 @@ async def _launch_next_meeting(code: str, party_id: int, db: Session):
     # Reset uniquement les flags de victime (pas has_drawn_corpocard !)
     db.query(Player).filter(Player.party_id == party_id).update({
         "victim_of_managers": False,
-        "victim_of_claire": False
+        "victim_of_claire": False,
+        "fired_by_stephane":   False
+        
     })
     db.commit()
 
@@ -1329,6 +1337,57 @@ async def _launch_next_meeting(code: str, party_id: int, db: Session):
         print(f"❌ Erreur start_meeting : {e}")
     finally:
         db_fresh.close()
+        
+        
+async def _handle_abdel_eliminated(code: str, party, abdel, db):
+    """Quand Abdel est éliminé, révéler et traiter les infectés."""
+    infectes = db.query(Player).filter(
+        Player.party_id == party.id,
+        Player.virus_from_abdel == True,
+        Player.is_alive == True
+    ).all()
+
+    if not infectes:
+        return  # Personne d'infecté, continuer normalement
+
+    # Annoncer Abdel + les victimes
+    noms = ", ".join([p.pseudo for p in infectes])
+    await broadcast(code, f"abdel_reveal:{abdel.pseudo}:{noms}")
+    await asyncio.sleep(3)
+
+    # Traiter chaque infecté
+    victims_with_joker    = [v for v in infectes if not v.has_drawn_corpocard]
+    victims_without_joker = [v for v in infectes if v.has_drawn_corpocard]
+
+    # Licencier directement ceux sans joker
+    for v in victims_without_joker:
+        v.is_alive = False
+    db.commit()
+
+    for v in victims_without_joker:
+        await broadcast(code, f"player_eliminated_direct:{v.pseudo}:{v.role}")
+    if victims_without_joker:
+        await asyncio.sleep(2)
+
+    # Vérif fin de partie
+    alive = db.query(Player).filter(Player.party_id == party.id, Player.is_alive == True).all()
+    if not [p for p in alive if p.is_manager]:
+        await broadcast(code, "game_over:victoire_collabs")
+        return
+    if not [p for p in alive if not p.is_manager]:
+        await broadcast(code, "game_over:victoire_managers")
+        return
+
+    # Ceux avec joker → défis à tour de rôle
+    if victims_with_joker:
+        victim_ids = [v.id for v in victims_with_joker]
+        party.last_eliminated_id = victim_ids[0]
+        party.meeting_phase      = "vote_defi"
+        party.defi_sub_phase     = "running_from_vote"
+        party.turn_order         = json.dumps(victim_ids)
+        party.current_turn       = 0
+        db.commit()
+        await broadcast(code, "phase:defi_decision")
 
 
 # ---------------------------------------------------------

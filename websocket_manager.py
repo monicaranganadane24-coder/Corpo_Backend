@@ -104,44 +104,125 @@ async def _end_meeting_async(code: str, party_id: int):
         if not party:
             return
 
-        victim = db.query(Player).filter(
+        import json as _json
+
+        # ── Construire la file ordonnée dynamiquement ──
+        ordered_victims = []  # liste de dicts {id, pseudo, role, has_joker}
+
+        # 1. Victime des Managers (Fabien)
+        v_managers = db.query(Player).filter(
+            Player.party_id == party_id,
+            Player.victim_of_managers == True,
+            Player.is_alive == True
+        ).first()
+        if v_managers:
+            ordered_victims.append({
+                "id": v_managers.id,
+                "pseudo": v_managers.pseudo,
+                "role": v_managers.role,
+                "has_joker": not v_managers.has_drawn_corpocard,
+                "reason": "Victime des Managers"
+            })
+
+        # 2. Victime de Claire (si elle a désigné quelqu'un)
+        v_claire = db.query(Player).filter(
             Player.party_id == party_id,
             Player.victim_of_claire == True,
             Player.is_alive == True
         ).first()
-        if not victim:
-            victim = db.query(Player).filter(
-                Player.party_id == party_id,
-                Player.victim_of_managers == True,
-                Player.is_alive == True
-            ).first()
+        if v_claire and v_claire.id not in [x["id"] for x in ordered_victims]:
+            ordered_victims.append({
+                "id": v_claire.id,
+                "pseudo": v_claire.pseudo,
+                "role": v_claire.role,
+                "has_joker": not v_claire.has_drawn_corpocard,
+                "reason": "Victime de Claire"
+            })
 
-        if victim:
-            all_victims = db.query(Player).filter(
+        # 3. Stéphane (s'il a vu Claire)
+        v_stephane = db.query(Player).filter(
+            Player.party_id == party_id,
+            Player.fired_by_stephane == True,
+            Player.is_alive == True
+        ).first()
+        if v_stephane and v_stephane.id not in [x["id"] for x in ordered_victims]:
+            ordered_victims.append({
+                "id": v_stephane.id,
+                "pseudo": v_stephane.pseudo,
+                "role": v_stephane.role,
+                "has_joker": not v_stephane.has_drawn_corpocard,
+                "reason": "A révélé Claire"
+            })
+
+        # 4. Victimes Abdel (seulement si Abdel définitivement éliminé = mort + joker utilisé)
+        abdel = db.query(Player).filter(
+            Player.party_id == party_id,
+            Player.role == "Abdel",
+            Player.is_alive == False,
+            Player.has_drawn_corpocard == True
+        ).first()
+        if abdel:
+            victims_abdel = db.query(Player).filter(
                 Player.party_id == party_id,
+                Player.virus_from_abdel == True,
                 Player.is_alive == True
-            ).filter(
-                (Player.victim_of_managers == True) | (Player.victim_of_claire == True)
             ).all()
+            for v in victims_abdel:
+                if v.id not in [x["id"] for x in ordered_victims]:
+                    ordered_victims.append({
+                        "id": v.id,
+                        "pseudo": v.pseudo,
+                        "role": v.role,
+                        "has_joker": not v.has_drawn_corpocard,
+                        "reason": "Virus d'Abdel"
+                    })
 
-            import json as _json
-
-            victims_with_joker    = [v for v in all_victims if not v.has_drawn_corpocard]
-            victims_without_joker = [v for v in all_victims if v.has_drawn_corpocard]
-
-            for v in victims_without_joker:
-                v.is_alive = False
-                print(f"⛔ {v.pseudo} éliminé directement (joker déjà utilisé)")
+        # ── Pas de victime → feedback direct ──
+        if not ordered_victims:
+            party.meeting_phase      = "feedback"
+            party.last_eliminated_id = None
+            party.current_turn       = 0
             db.commit()
+            print("🟢 Pas de victime → feedback direct")
+            await broadcast(code, "phase:feedback:pre_vote")
+            return
 
-            if victims_without_joker:
-                for v in victims_without_joker:
-                    await broadcast(code, f"player_eliminated_direct:{v.pseudo}:{v.role}")
-                await asyncio.sleep(2)
+        # ── Broadcaster le récap ──
+        recap_data = _json.dumps([{
+            "id": v["id"],
+            "pseudo": v["pseudo"],
+            "role": v["role"],
+            "has_joker": v["has_joker"],
+            "reason": v["reason"]
+        } for v in ordered_victims])
 
-            alive_check = db.query(Player).filter(
-                Player.party_id == party_id, Player.is_alive == True
-            ).all()
+        victim_ids = [v["id"] for v in ordered_victims]
+        party.turn_order         = _json.dumps(victim_ids)
+        party.current_turn       = 0
+        party.last_eliminated_id = victim_ids[0]
+        party.meeting_phase      = "feedback_defi"
+        party.defi_sub_phase     = "running_from_meeting"
+        db.commit()
+
+        print(f"🚨 File : {[(v['pseudo'], v['reason'], 'joker' if v['has_joker'] else 'direct') for v in ordered_victims]}")
+
+        # Broadcaster le récap → feedback_defi.html l'affiche 5s
+        await broadcast(code, f"licenciements_recap:{recap_data}")
+        await asyncio.sleep(5)
+
+        # ── Traiter le premier de la file ──
+        first = ordered_victims[0]
+        if not first["has_joker"]:
+            # Pas de joker → élimination directe
+            player_first = db.query(Player).filter(Player.id == first["id"]).first()
+            if player_first:
+                player_first.is_alive = False
+                db.commit()
+            await broadcast(code, f"player_eliminated_direct:{first['pseudo']}:{first['role']}")
+            await asyncio.sleep(2)
+
+            # Vérif fin de partie
+            alive_check = db.query(Player).filter(Player.party_id == party_id, Player.is_alive == True).all()
             if not [p for p in alive_check if p.is_manager]:
                 await broadcast(code, "game_over:victoire_collabs")
                 return
@@ -149,32 +230,13 @@ async def _end_meeting_async(code: str, party_id: int):
                 await broadcast(code, "game_over:victoire_managers")
                 return
 
-            if victims_with_joker:
-                victim_ids = [v.id for v in victims_with_joker]
-                party.last_eliminated_id = victim_ids[0]
-                party.meeting_phase      = "feedback_defi"
-                party.defi_sub_phase     = "running_from_meeting"
-                party.turn_order         = _json.dumps(victim_ids)
-                party.current_turn       = 0
-                db.commit()
-                print(f"🚨 Victimes avec joker : {[v.pseudo for v in victims_with_joker]}")
-                await broadcast(code, "phase:defi_decision")
-            else:
-                party.meeting_phase      = "feedback"
-                party.last_eliminated_id = None
-                party.defi_sub_phase     = None
-                party.turn_order         = None
-                party.current_turn       = 0
-                db.commit()
-                print("🟢 Toutes victimes éliminées directement → feedback")
-                await broadcast(code, "phase:feedback:pre_vote")
+            # Passer au suivant
+            from routes.partyRoutes import _process_next_in_queue
+            await _process_next_in_queue(code, party_id, 0, False)
         else:
-            party.meeting_phase      = "feedback"
-            party.last_eliminated_id = None
-            party.current_turn       = 0
-            db.commit()
-            print("🟢 Pas de victime → feedback direct")
-            await broadcast(code, "phase:feedback:pre_vote")
+            # A un joker → défi corpo
+            await broadcast(code, "phase:defi_decision")
+
     finally:
         db.close()
 
@@ -194,7 +256,8 @@ async def _launch_next_meeting_ws(code: str, party_id: int):
         party.last_eliminated_id = None
         db.query(Player).filter(Player.party_id == party_id).update({
             "victim_of_managers": False,
-            "victim_of_claire":   False
+            "victim_of_claire":   False,
+            "fired_by_stephane":  False
         })
         db.commit()
         await broadcast(code, f"next_meeting:{party.meeting_number}")
@@ -324,9 +387,9 @@ async def handle_message(code: str, websocket, message: str):
                     await send_to_player(code, int(target_id),
                         f"stephane_reveal_target:{stephane.role}:{stephane.pseudo}")
                     if target.role == "Claire":
-                        stephane.is_alive = False
+                        stephane.fired_by_stephane = True
                         db.commit()
-                        await broadcast(code, f"player_fired:{stephane.pseudo}")
+                        await broadcast(code, f"stephane_vu_claire:{stephane.pseudo}")
                 return
 
             elif action == "denis_swap" and target_id:
