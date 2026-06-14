@@ -188,7 +188,7 @@ CORPO_CARDS = [
     },
     {
         "id": 13, "type": "vote", "timer": 30, "duo": False,
-        "text": "En 30 secondes, cite 2 citations inspirantes. Si tu réussis, tous les autres font 5 pompes !",
+        "text": "En 30 secondes, cite 2 citations inspirantes.",
         "instructions": "Nelson Mandela, Gandhi, ou LinkedIn ? La majorité valide.",
         "vote_label": "Les citations sont-elles convaincantes ?"
     },
