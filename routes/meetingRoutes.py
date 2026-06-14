@@ -1,3 +1,5 @@
+import code
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database.connection import get_db, SessionLocal
@@ -78,6 +80,9 @@ async def start_meeting(code: str, db: Session):
 
     await broadcast(code, "phase:meeting_start")
     await asyncio.sleep(3)
+
+    # 🔥 On envoie l’ordre complet du meeting au front
+    await broadcast(code, "meeting_order:" + ",".join(ordre_meeting))
 
     first_player = roles_present[ordre_meeting[0]]
     print(f"🎯 Premier joueur : {first_player.role}")
