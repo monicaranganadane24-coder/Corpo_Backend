@@ -78,7 +78,7 @@ async def start_meeting(code: str, db: Session):
     db.commit()
 
     await broadcast(code, "phase:meeting_start")
-    await asyncio.sleep(3)
+    await asyncio.sleep(8)
 
     # 🔥 On envoie l’ordre complet du meeting au front
     await broadcast(code, "meeting_order:" + ",".join(ordre_meeting))

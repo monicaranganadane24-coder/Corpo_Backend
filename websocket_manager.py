@@ -28,10 +28,18 @@ async def broadcast(code: str, message: str):
 
 
 async def send_to_player(code: str, player_id: int, message: str):
+    print(
+        f"SEND_TO_PLAYER room={code} "
+        f"player={player_id} "
+        f"connected={code in connections and player_id in connections.get(code,{})}"
+    )
+
     if code in connections and player_id in connections[code]:
         try:
             await connections[code][player_id].send_text(message)
-        except:
+            print("MESSAGE ENVOYE :", message)
+        except Exception as e:
+            print("ERREUR WS :", e)
             connections[code].pop(player_id, None)
 
 
