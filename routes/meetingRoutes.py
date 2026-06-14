@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from database.connection import get_db, SessionLocal
 from models.playerModel import Player
 from models.partyModel import Party
-from websocket_manager import broadcast, next_turn
+from websocket_manager import broadcast, next_turn, send_to_player
 import json
 import asyncio
 
@@ -98,7 +98,7 @@ async def start_meeting(code: str, db: Session):
 
     # Envoyer l’info UNIQUEMENT à Cindy
         from websocket_manager import send_to_player
-        await send_to_player(code, roles_present["Cindy"].id, f"cindy_info:{info}")
+        await send_to_player(code, roles_present["Cindy"].id, f"cindy_voisin:{'oui' if info == 'yes' else 'non'}")
 
 
     first_player = roles_present[ordre_meeting[0]]
