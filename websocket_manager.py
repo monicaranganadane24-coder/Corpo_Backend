@@ -328,11 +328,12 @@ async def handle_message(code: str, websocket, message: str):
                 return
 
             turn_order = json.loads(party.turn_order)
-            if party.current_turn < len(turn_order):
-                expected_id = turn_order[party.current_turn]
-                if int(player_id) != int(expected_id):
-                    print(f"⚠️ Action ignorée : pas le tour de {player_id} (attendu: {expected_id})")
-                    return
+            pass
+            #if party.current_turn < len(turn_order):
+                #expected_id = turn_order[party.current_turn]
+                #if int(player_id) != int(expected_id):
+                 #   print(f"⚠️ Action ignorée : pas le tour de {player_id} (attendu: {expected_id})")
+                  #  return
 
             print(f"🎯 ACTION: {action} | joueur {player_id} ({role}) → cible {target_id}")
 
