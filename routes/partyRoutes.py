@@ -313,9 +313,7 @@ def verify_party(code: str, db: Session = Depends(get_db)):
     party = db.query(Party).filter(Party.code == code).first()
     if not party:
         raise HTTPException(404, "Partie introuvable")
-    # 🔥 Abdel en cours de traitement → ignorer next_phase auto
-    if party.defi_sub_phase == "abdel_processing":
-        return {"message": "Abdel en cours de traitement — ignoré"}
+
     return {
         "party_id": party.id,
         "code": party.code,
@@ -925,6 +923,10 @@ async def next_phase(code: str, db: Session = Depends(get_db)):
     print("================================")
     if not party:
         raise HTTPException(404, "Partie introuvable")
+    
+    # 🔥 Abdel en cours de traitement → ignorer next_phase auto
+    if party.defi_sub_phase == "abdel_processing":
+        return {"message": "Abdel en cours de traitement — ignoré"}
 
     # Vérif fin de partie
     alive = db.query(Player).filter(
