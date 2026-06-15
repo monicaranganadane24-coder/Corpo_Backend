@@ -313,6 +313,9 @@ def verify_party(code: str, db: Session = Depends(get_db)):
     party = db.query(Party).filter(Party.code == code).first()
     if not party:
         raise HTTPException(404, "Partie introuvable")
+    # 🔥 Abdel en cours de traitement → ignorer next_phase auto
+    if party.defi_sub_phase == "abdel_processing":
+        return {"message": "Abdel en cours de traitement — ignoré"}
     return {
         "party_id": party.id,
         "code": party.code,
@@ -623,7 +626,7 @@ async def submit_vote(request: VoteRequest, db: Session = Depends(get_db)):
                 party.turn_order         = json.dumps(eliminated_ids)
                 party.current_turn       = 0
                 party.meeting_phase      = "vote_defi"
-                party.defi_sub_phase     = "running_from_meeting"
+                party.defi_sub_phase     = "running_from_vote"
                 db.commit()
                 await broadcast(party.code, "phase:defi_decision")
 
@@ -874,7 +877,7 @@ async def defi_vote(request: DefiVoteRequest, db: Session = Depends(get_db)):
             print(f"{'✅' if success else '❌'} Défi {'réussi' if success else 'échoué'} pour {eliminated.pseudo}")
         db.commit()
         
-        # 🔥 Si Abdel est éliminé → traiter les infectés
+        # 🔥 Si Abdel est éliminé → broadcaster le résultat D'ABORD puis traiter les infectés
         if eliminated and not eliminated.is_alive and eliminated.role == "Abdel":
             await _handle_abdel_eliminated(request.party_code, party, eliminated, db)
             return {"message": "Abdel éliminé — infectés traités"}
@@ -1380,14 +1383,31 @@ async def _handle_abdel_eliminated(code: str, party, abdel, db):
     ).all()
 
     if not infectes:
-        return  # Personne d'infecté, continuer normalement
+        # Pas d'infectés → continuer normalement
+        party.current_defi_id = None
+        db.commit()
+        await broadcast(code, "defi_result:fail")
+        return
 
-    # Annoncer Abdel + les victimes
+    # 🔥 Annoncer d'abord le résultat du défi d'Abdel
+    party.current_defi_id = None
+    db.commit()
+    await broadcast(code, "defi_result:fail")
+    
+    # Marquer qu'Abdel est en cours de traitement pour bloquer next_phase auto
+    party.meeting_phase  = "vote_defi"
+    party.defi_sub_phase = "abdel_processing"
+    db.commit()
+
+    # Attendre que resultat_defi affiche le verdict (timer 10s auto)
+    await asyncio.sleep(11)
+
+    # Annoncer les infectés
     noms = ", ".join([p.pseudo for p in infectes])
     await broadcast(code, f"abdel_reveal:{abdel.pseudo}:{noms}")
     await asyncio.sleep(3)
 
-    # Traiter chaque infecté
+    # Séparer ceux avec et sans joker
     victims_with_joker    = [v for v in infectes if not v.has_drawn_corpocard]
     victims_without_joker = [v for v in infectes if v.has_drawn_corpocard]
 
@@ -1402,7 +1422,10 @@ async def _handle_abdel_eliminated(code: str, party, abdel, db):
         await asyncio.sleep(2)
 
     # Vérif fin de partie
-    alive = db.query(Player).filter(Player.party_id == party.id, Player.is_alive == True).all()
+    alive = db.query(Player).filter(
+        Player.party_id == party.id,
+        Player.is_alive == True
+    ).all()
     if not [p for p in alive if p.is_manager]:
         await broadcast(code, "game_over:victoire_collabs")
         return
@@ -1420,6 +1443,9 @@ async def _handle_abdel_eliminated(code: str, party, abdel, db):
         party.current_turn       = 0
         db.commit()
         await broadcast(code, "phase:defi_decision")
+    else:
+        # Tous sans joker → next meeting
+        await _launch_next_meeting(code, party.id, db)
 
 
 # ---------------------------------------------------------
