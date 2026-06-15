@@ -177,13 +177,15 @@ async def _end_meeting_async(code: str, party_id: int):
             })
 
         # 4. Victimes Abdel (seulement si Abdel définitivement éliminé = mort + joker utilisé)
+        # 🔥 FIX : Ne pas traiter ici si _handle_abdel_eliminated a déjà été appelé
+        #           (defi_sub_phase == "abdel_processing" signifie qu'il est déjà en cours)
         abdel = db.query(Player).filter(
             Player.party_id == party_id,
             Player.role == "Abdel",
             Player.is_alive == False,
             Player.has_drawn_corpocard == True
         ).first()
-        if abdel:
+        if abdel and party.defi_sub_phase != "abdel_processing":
             victims_abdel = db.query(Player).filter(
                 Player.party_id == party_id,
                 Player.virus_from_abdel == True,
@@ -279,7 +281,8 @@ async def _launch_next_meeting_ws(code: str, party_id: int):
         db.query(Player).filter(Player.party_id == party_id).update({
             "victim_of_managers": False,
             "victim_of_claire":   False,
-            "fired_by_stephane":  False
+            "fired_by_stephane":  False,
+            "virus_from_abdel":   False,   # 🔥 FIX
         })
         db.commit()
         await broadcast(code, f"next_meeting:{party.meeting_number}")
@@ -427,7 +430,8 @@ async def handle_message(code: str, websocket, message: str):
 
             elif action == "abdel_virus" and target_id:
                 target = db.query(Player).filter(Player.id == int(target_id)).first()
-                if target:
+                # 🔥 FIX : Abdel ne peut pas se contaminer lui-même, et la cible doit être vivante
+                if target and target.id != player_id and target.is_alive:
                     target.virus_from_abdel = True
                     db.commit()
 
