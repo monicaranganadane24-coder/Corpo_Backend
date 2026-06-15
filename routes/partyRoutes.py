@@ -1377,41 +1377,35 @@ async def _launch_next_meeting(code: str, party_id: int, db: Session):
         
         
 async def _handle_abdel_eliminated(code: str, party, abdel, db):
-    """Quand Abdel est éliminé, révéler et traiter les infectés."""
     infectes = db.query(Player).filter(
         Player.party_id == party.id,
         Player.virus_from_abdel == True,
         Player.is_alive == True
     ).all()
 
-    if not infectes:
-        # Pas d'infectés → continuer normalement
-        party.current_defi_id = None
-        db.commit()
-        await broadcast(code, "defi_result:fail")
-        return
-
-    # 🔥 Annoncer d'abord le résultat du défi d'Abdel
+    # 🔥 Marquer AVANT tout broadcast pour bloquer next_phase
     party.current_defi_id = None
-    db.commit()
-    await broadcast(code, "defi_result:fail")
     party.meeting_phase  = "vote_defi"
     party.defi_sub_phase = "abdel_processing"
     db.commit()
 
-    # Attendre que resultat_defi affiche le verdict
-    await asyncio.sleep(2)
+    # Broadcaster le résultat du défi d'Abdel
+    await broadcast(code, "defi_result:fail")
 
-    # Annoncer les infectés → resultat_defi.html redirige vers feedback_defi
+    if not infectes:
+        party.defi_sub_phase = None
+        db.commit()
+        await broadcast(code, "phase:feedback:pre_vote")
+        return
+
+    await asyncio.sleep(2)
     noms = ", ".join([p.pseudo for p in infectes])
     await broadcast(code, f"abdel_reveal:{abdel.pseudo}:{noms}")
     await asyncio.sleep(3)
 
-    # Séparer ceux avec et sans joker
     victims_with_joker    = [v for v in infectes if not v.has_drawn_corpocard]
     victims_without_joker = [v for v in infectes if v.has_drawn_corpocard]
 
-    # Licencier directement ceux sans joker
     for v in victims_without_joker:
         v.is_alive = False
     db.commit()
@@ -1421,11 +1415,7 @@ async def _handle_abdel_eliminated(code: str, party, abdel, db):
     if victims_without_joker:
         await asyncio.sleep(2)
 
-    # Vérif fin de partie
-    alive = db.query(Player).filter(
-        Player.party_id == party.id,
-        Player.is_alive == True
-    ).all()
+    alive = db.query(Player).filter(Player.party_id == party.id, Player.is_alive == True).all()
     if not [p for p in alive if p.is_manager]:
         await broadcast(code, "game_over:victoire_collabs")
         return
@@ -1433,7 +1423,6 @@ async def _handle_abdel_eliminated(code: str, party, abdel, db):
         await broadcast(code, "game_over:victoire_managers")
         return
 
-    # Ceux avec joker → défis à tour de rôle
     if victims_with_joker:
         victim_ids = [v.id for v in victims_with_joker]
         party.last_eliminated_id = victim_ids[0]
@@ -1444,7 +1433,6 @@ async def _handle_abdel_eliminated(code: str, party, abdel, db):
         db.commit()
         await broadcast(code, "phase:defi_decision")
     else:
-        # Tous sans joker → next meeting
         await _launch_next_meeting(code, party.id, db)
 
 
