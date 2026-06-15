@@ -623,7 +623,7 @@ async def submit_vote(request: VoteRequest, db: Session = Depends(get_db)):
                 party.turn_order         = json.dumps(eliminated_ids)
                 party.current_turn       = 0
                 party.meeting_phase      = "vote_defi"
-                party.defi_sub_phase     = "running_from_vote"
+                party.defi_sub_phase     = "running_from_meeting"
                 db.commit()
                 await broadcast(party.code, "phase:defi_decision")
 
