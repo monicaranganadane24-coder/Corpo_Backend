@@ -589,6 +589,12 @@ async def handle_message(code: str, websocket, message: str):
                             await asyncio.sleep(1)
                             await broadcast(code, f"player_eliminated_direct:{coupable.pseudo}:{coupable.role}")
 
+                            # 🔥 Si Abdel éliminé → traiter les infectés
+                            if coupable.role == "Abdel":
+                                from routes.partyRoutes import _handle_abdel_eliminated
+                                await _handle_abdel_eliminated(code, party_tiff, coupable, db_tiff)
+                                return
+
                             # Vérif fin de partie
                             alive = db_tiff.query(Player).filter(
                                 Player.party_id == party_tiff.id,
