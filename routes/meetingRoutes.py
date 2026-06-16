@@ -10,14 +10,14 @@ import asyncio
 router = APIRouter(prefix="/meeting", tags=["Meeting"])
 
 ORDER_MEETING_1 = [
-    "Cindy", "Denis",
-    "Fabien", "Claire", "Tiff", "Pascal", "Stéphane", "Abdel"
+    "Cindy",
+    "Fabien", "Claire", "Tiff", "Pascal", "Stéphane", "Abdel", "Denis"
 ]
 
 
 ORDER_MEETING_2PLUS = [
-    "Cindy", "Denis",
-    "Fabien", "Claire", "Tiff", "Pascal", "Stéphane", "Abdel"
+    "Cindy",
+    "Fabien", "Claire", "Tiff", "Pascal", "Stéphane", "Abdel", "Denis"
 ]
 
 # Dictionnaire pour tracker les tâches de timer par room

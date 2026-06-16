@@ -183,7 +183,7 @@ async def _end_meeting_async(code: str, party_id: int):
             Player.is_alive == False,
             Player.has_drawn_corpocard == True
         ).first()
-        if abdel and party.defi_sub_phase != "abdel_processing":
+        if abdel:
             victims_abdel = db.query(Player).filter(
                 Player.party_id == party_id,
                 Player.virus_from_abdel == True,
@@ -228,9 +228,9 @@ async def _end_meeting_async(code: str, party_id: int):
 
         print(f"🚨 File : {[(v['pseudo'], v['reason'], 'joker' if v['has_joker'] else 'direct') for v in ordered_victims]}")
 
-        # Broadcaster le récap → feedback_defi.html l'affiche 5s
+        # 🔥 FIX : 1) broadcaster le recap 2) attendre que les joueurs arrivent sur feedback_defi 3) traiter
         await broadcast(code, f"licenciements_recap:{recap_data}")
-        await asyncio.sleep(5)
+        await asyncio.sleep(5)  # temps suffisant pour que tous arrivent sur feedback_defi.html
 
         # ── Traiter le premier de la file ──
         first = ordered_victims[0]
@@ -279,8 +279,7 @@ async def _launch_next_meeting_ws(code: str, party_id: int):
         db.query(Player).filter(Player.party_id == party_id).update({
             "victim_of_managers": False,
             "victim_of_claire":   False,
-            "fired_by_stephane":  False,
-            "virus_from_abdel":   False,   # 🔥 FIX
+            "fired_by_stephane":  False
         })
         db.commit()
         await broadcast(code, f"next_meeting:{party.meeting_number}")
@@ -428,8 +427,7 @@ async def handle_message(code: str, websocket, message: str):
 
             elif action == "abdel_virus" and target_id:
                 target = db.query(Player).filter(Player.id == int(target_id)).first()
-                # 🔥 FIX : Abdel ne peut pas se contaminer lui-même, et la cible doit être vivante
-                if target and target.id != player_id and target.is_alive:
+                if target:
                     target.virus_from_abdel = True
                     db.commit()
 
@@ -580,7 +578,7 @@ async def handle_message(code: str, websocket, message: str):
                             await asyncio.sleep(2)
                             await broadcast(code, "phase:defi_decision")
                         else:
-                            # retour feedback
+                            # Joker déjà utilisé → élimination directe + retour feedback
                             coupable.is_alive                 = False
                             party_tiff.last_eliminated_id     = coupable.id
                             party_tiff.meeting_phase          = "feedback"
