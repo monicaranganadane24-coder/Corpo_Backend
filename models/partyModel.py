@@ -9,6 +9,7 @@ class Party(Base):
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String(10), unique=True, nullable=False)
     host_id = Column(Integer, nullable=False)
+    name = Column(String(100), nullable=True)
     is_private = Column(Boolean, default=False)
     status = Column(String(20), default="waiting")  # "waiting", "started", "revelation", "ended"
     last_activity = Column(DateTime, default=datetime.utcnow)
