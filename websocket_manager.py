@@ -379,10 +379,6 @@ async def handle_message(code: str, websocket, message: str):
             elif action == "claire_fire" and target_id:
                 claire = db.query(Player).filter(Player.id == player_id).first()
                 if claire and not claire.has_used_power:
-                    db.query(Player).filter(
-                        Player.party_id == party.id,
-                        Player.victim_of_managers == True
-                    ).update({"victim_of_managers": False})
                     target = db.query(Player).filter(Player.id == int(target_id)).first()
                     if target:
                         target.victim_of_claire = True
