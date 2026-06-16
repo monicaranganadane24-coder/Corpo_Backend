@@ -177,8 +177,6 @@ async def _end_meeting_async(code: str, party_id: int):
             })
 
         # 4. Victimes Abdel (seulement si Abdel définitivement éliminé = mort + joker utilisé)
-        # 🔥 FIX : Ne pas traiter ici si _handle_abdel_eliminated a déjà été appelé
-        #           (defi_sub_phase == "abdel_processing" signifie qu'il est déjà en cours)
         abdel = db.query(Player).filter(
             Player.party_id == party_id,
             Player.role == "Abdel",
@@ -582,7 +580,7 @@ async def handle_message(code: str, websocket, message: str):
                             await asyncio.sleep(2)
                             await broadcast(code, "phase:defi_decision")
                         else:
-                            # Joker déjà utilisé → élimination directe + retour feedback
+                            # retour feedback
                             coupable.is_alive                 = False
                             party_tiff.last_eliminated_id     = coupable.id
                             party_tiff.meeting_phase          = "feedback"
