@@ -338,13 +338,13 @@ def get_players(party_id: int, db: Session = Depends(get_db)):
 # PARTIES PUBLIQUES
 # ---------------------------------------------------------
 @router.get("/public")
+@router.get("/public")
 def get_public_parties(db: Session = Depends(get_db)):
     parties = db.query(Party).filter(
         Party.is_private == False,
         Party.status == "waiting"
     ).all()
-    return [{"party_id": p.id, "code": p.code, "host_id": p.host_id} for p in parties]
-
+    return [{"party_id": p.id, "code": p.code, "host_id": p.host_id, "name": p.name} for p in parties]
 
 # ---------------------------------------------------------
 # RÔLE D'UN JOUEUR
