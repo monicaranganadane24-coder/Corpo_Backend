@@ -875,8 +875,13 @@ async def defi_vote(request: DefiVoteRequest, db: Session = Depends(get_db)):
             print(f"{'✅' if success else '❌'} Défi {'réussi' if success else 'échoué'} pour {eliminated.pseudo}")
         db.commit()
         
-        # 🔥 Si Abdel est éliminé → broadcaster le résultat D'ABORD puis traiter les infectés
+        # 🔥 Si Abdel est éliminé → broadcaster defi_result:fail PUIS attendre que
+        #    le front arrive sur resultat_defi.html AVANT de traiter les infectés
         if eliminated and not eliminated.is_alive and eliminated.role == "Abdel":
+            party.current_defi_id = None
+            db.commit()
+            await broadcast(request.party_code, "defi_result:fail")
+            await asyncio.sleep(3)  # Laisser le front se charger sur resultat_defi.html
             await _handle_abdel_eliminated(request.party_code, party, eliminated, db)
             return {"message": "Abdel éliminé — infectés traités"}
 
@@ -993,7 +998,6 @@ async def next_phase(code: str, db: Session = Depends(get_db)):
         "victim_of_managers": False,
         "victim_of_claire": False,
         "fired_by_stephane":  False,
-        "virus_from_abdel": False,   # 🔥 FIX
     })
     party.last_eliminated_id = None
     party.turn_order         = None
@@ -1068,7 +1072,7 @@ async def _process_next_in_queue(code: str, party_id: int, current_index: int, c
                 "victim_of_managers": False,
                 "victim_of_claire": False,
                 "fired_by_stephane":  False,
-                "virus_from_abdel": False,   # 🔥 FIX
+
             })
             party.last_eliminated_id = None
             party.turn_order         = None
@@ -1359,8 +1363,8 @@ async def _launch_next_meeting(code: str, party_id: int, db: Session):
     db.query(Player).filter(Player.party_id == party_id).update({
         "victim_of_managers": False,
         "victim_of_claire": False,
-        "fired_by_stephane": False,
-        "virus_from_abdel": False,   # 🔥 FIX : reset entre chaque meeting
+        "fired_by_stephane":   False
+        
     })
     db.commit()
 
@@ -1384,14 +1388,13 @@ async def _handle_abdel_eliminated(code: str, party, abdel, db):
         Player.is_alive == True
     ).all()
 
-    # 🔥 Marquer AVANT tout broadcast pour bloquer next_phase
+    # 🔥 Marquer AVANT tout broadcast pour bloquer next_phase auto
     party.current_defi_id = None
     party.meeting_phase  = "vote_defi"
     party.defi_sub_phase = "abdel_processing"
     db.commit()
 
-    # Broadcaster le résultat du défi d'Abdel
-    await broadcast(code, "defi_result:fail")
+    # ⚠️ NE PAS broadcaster defi_result:fail ici — déjà fait par defi_vote avant d'appeler cette fonction
 
     if not infectes:
         party.defi_sub_phase = None
@@ -1409,9 +1412,6 @@ async def _handle_abdel_eliminated(code: str, party, abdel, db):
 
     for v in victims_without_joker:
         v.is_alive = False
-        v.virus_from_abdel = False  # 🔥 FIX : éviter double traitement
-    for v in victims_with_joker:
-        v.virus_from_abdel = False  # 🔥 FIX : éviter double traitement
     db.commit()
 
     for v in victims_without_joker:
@@ -1487,9 +1487,7 @@ async def next_meeting(code: str, db: Session = Depends(get_db)):
     # Reset des flags de victime pour le nouveau meeting
     db.query(Player).filter(Player.party_id == party.id).update({
         "victim_of_managers": False,
-        "victim_of_claire": False,
-        "fired_by_stephane": False,
-        "virus_from_abdel": False,   # 🔥 FIX
+        "victim_of_claire": False
     })
     db.commit()
 
@@ -1506,70 +1504,3 @@ async def next_meeting(code: str, db: Session = Depends(get_db)):
         db_fresh.close()
 
     return {"message": f"Meeting {party.meeting_number} lancé"}
-
-# ---------------------------------------------------------
-# 🔥 ROUTE MANQUANTE : Marquer qu'un joueur a tiré sa carte corpo
-# ---------------------------------------------------------
-@router.post("/draw_corpocard/{player_id}")
-async def draw_corpocard(player_id: int, db: Session = Depends(get_db)):
-    player = db.query(Player).filter(Player.id == player_id).first()
-    if not player:
-        raise HTTPException(404, "Joueur introuvable")
-    player.has_drawn_corpocard = True
-    db.commit()
-    return {"message": "Carte corpo marquée", "player_id": player_id}
-
-
-# ---------------------------------------------------------
-# 🔥 ROUTE MANQUANTE : Résultat du défi (refus ou timeout)
-# Appelée quand le joueur refuse ou ne répond pas à temps
-# ---------------------------------------------------------
-class DefiResultRequest(BaseModel):
-    player_id: int
-    success: bool
-
-@router.post("/defi_result")
-async def defi_result(request: DefiResultRequest, db: Session = Depends(get_db)):
-    player = db.query(Player).filter(Player.id == request.player_id).first()
-    if not player:
-        raise HTTPException(404, "Joueur introuvable")
-
-    party = db.query(Party).filter(Party.id == player.party_id).first()
-    if not party:
-        raise HTTPException(404, "Partie introuvable")
-
-    player.has_drawn_corpocard = True
-
-    if not request.success:
-        # Échec/refus → élimination directe
-        player.is_alive = False
-        player.victim_of_managers = False
-        player.victim_of_claire = False
-        db.commit()
-
-        # 🔥 Si Abdel éliminé → traiter les infectés
-        if player.role == "Abdel":
-            await _handle_abdel_eliminated(party.code, party, player, db)
-            return {"message": "Abdel éliminé — infectés traités"}
-
-        alive = db.query(Player).filter(Player.party_id == party.id, Player.is_alive == True).all()
-        alive_managers = [p for p in alive if p.is_manager]
-        alive_collabs  = [p for p in alive if not p.is_manager]
-
-        if not alive_managers:
-            await broadcast(party.code, "game_over:victoire_collabs")
-            return {"message": "Victoire Collaborateurs"}
-        if not alive_collabs:
-            await broadcast(party.code, "game_over:victoire_managers")
-            return {"message": "Victoire Managers"}
-
-        await broadcast(party.code, f"player_eliminated_direct:{player.pseudo}:{player.role}")
-        await asyncio.sleep(2)
-        await _launch_next_meeting(party.code, party.id, db)
-    else:
-        player.victim_of_managers = False
-        player.victim_of_claire = False
-        db.commit()
-        await broadcast(party.code, "defi_result:success")
-
-    return {"message": "Résultat défi traité"}
