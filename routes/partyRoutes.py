@@ -1452,13 +1452,27 @@ async def _handle_abdel_eliminated(code: str, party, abdel, db):
         await broadcast(code, "phase:feedback:pre_vote")
         return
 
+    victims_with_joker    = [v for v in infectes if not v.has_drawn_corpocard]
+    victims_without_joker = [v for v in infectes if v.has_drawn_corpocard]
+
+    # 🔥 FIX : mettre à jour last_eliminated_id/turn_order AVANT le broadcast abdel_reveal
+    # pour que feedback_defi.html (qui se charge dès qu'il reçoit abdel_reveal)
+    # trouve déjà la bonne victime via /party/meeting_victim
+    if victims_with_joker:
+        victim_ids = [v.id for v in victims_with_joker]
+        party.last_eliminated_id = victim_ids[0]
+        party.turn_order         = json.dumps(victim_ids)
+        party.current_turn       = 0
+    else:
+        party.last_eliminated_id = None
+        party.turn_order         = None
+        party.current_turn       = 0
+    db.commit()
+
     await asyncio.sleep(2)
     noms = ", ".join([p.pseudo for p in infectes])
     await broadcast(code, f"abdel_reveal:{abdel.pseudo}:{noms}")
     await asyncio.sleep(3)
-
-    victims_with_joker    = [v for v in infectes if not v.has_drawn_corpocard]
-    victims_without_joker = [v for v in infectes if v.has_drawn_corpocard]
 
     for v in victims_without_joker:
         v.is_alive = False
@@ -1478,18 +1492,12 @@ async def _handle_abdel_eliminated(code: str, party, abdel, db):
         return
 
     if victims_with_joker:
-        victim_ids = [v.id for v in victims_with_joker]
-        party.last_eliminated_id = victim_ids[0]
-        party.meeting_phase      = "vote_defi"
-        party.defi_sub_phase     = "running_from_vote"
-        party.turn_order         = json.dumps(victim_ids)
-        party.current_turn       = 0
-        party.last_eliminated_id = victims_with_joker[0].id
+        party.meeting_phase  = "vote_defi"
+        party.defi_sub_phase = "running_from_vote"
         db.commit()
         await broadcast(code, "phase:defi_decision")
     else:
         await _launch_next_meeting(code, party.id, db)
-
 
 # ---------------------------------------------------------
 # RÉCUPÉRER LA VICTIME DU MEETING en cours (pour feedback_defi)
