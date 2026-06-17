@@ -209,7 +209,6 @@ CORPO_CARDS = [
 
 class CreatePartyRequest(BaseModel):
     pseudo: str
-    name: str = None
     is_private: bool = False
 
 class JoinPartyRequest(BaseModel):
@@ -243,7 +242,6 @@ def create_party(request: CreatePartyRequest, db: Session = Depends(get_db)):
     party = Party(
         code=code,
         host_id=player.id,
-        name=request.name,
         is_private=request.is_private,
         status="waiting",
         last_activity=datetime.utcnow()
@@ -877,13 +875,8 @@ async def defi_vote(request: DefiVoteRequest, db: Session = Depends(get_db)):
             print(f"{'✅' if success else '❌'} Défi {'réussi' if success else 'échoué'} pour {eliminated.pseudo}")
         db.commit()
         
-        # 🔥 Si Abdel est éliminé → broadcaster defi_result:fail PUIS attendre que
-        #    le front arrive sur resultat_defi.html AVANT de traiter les infectés
+        # 🔥 Si Abdel est éliminé → broadcaster le résultat D'ABORD puis traiter les infectés
         if eliminated and not eliminated.is_alive and eliminated.role == "Abdel":
-            party.current_defi_id = None
-            db.commit()
-            await broadcast(request.party_code, "defi_result:fail")
-            await asyncio.sleep(3)  # Laisser le front se charger sur resultat_defi.html
             await _handle_abdel_eliminated(request.party_code, party, eliminated, db)
             return {"message": "Abdel éliminé — infectés traités"}
 
@@ -969,6 +962,7 @@ async def next_phase(code: str, db: Session = Depends(get_db)):
             next_victim.is_alive = False
             party.last_eliminated_id = next_victim_id
             party.current_turn = next_turn_index
+            party.current_defi_id = None  # 🔥 FIX : reset défi pour la prochaine victime
             db.commit()
 
             # Vérif fin de partie après élimination directe
@@ -988,7 +982,7 @@ async def next_phase(code: str, db: Session = Depends(get_db)):
             # Joker disponible → proposer le défi
             party.last_eliminated_id = next_victim_id
             party.current_turn       = next_turn_index
-            # Conserver came_from_vote dans defi_sub_phase
+            party.current_defi_id    = None  # 🔥 FIX : reset défi pour la prochaine victime
             party.defi_sub_phase = "running_from_vote" if came_from_vote else "running_from_meeting"
             db.commit()
             await broadcast(code, "phase:defi_decision")
@@ -1042,6 +1036,7 @@ async def _process_next_in_queue(code: str, party_id: int, current_index: int, c
             else:
                 party.last_eliminated_id = next_victim_id
                 party.current_turn       = next_index
+                party.current_defi_id    = None  # 🔥 FIX : reset défi pour la prochaine victime
                 party.defi_sub_phase = "running_from_vote" if came_from_vote else "running_from_meeting"
                 db.commit()
                 await broadcast(code, "phase:defi_decision")
@@ -1365,8 +1360,8 @@ async def _launch_next_meeting(code: str, party_id: int, db: Session):
     db.query(Player).filter(Player.party_id == party_id).update({
         "victim_of_managers": False,
         "victim_of_claire": False,
-        "fired_by_stephane":   False
-        
+        "fired_by_stephane": False,
+        "virus_from_abdel": False,
     })
     db.commit()
 
@@ -1390,13 +1385,14 @@ async def _handle_abdel_eliminated(code: str, party, abdel, db):
         Player.is_alive == True
     ).all()
 
-    # 🔥 Marquer AVANT tout broadcast pour bloquer next_phase auto
+    # 🔥 Marquer AVANT tout broadcast pour bloquer next_phase
     party.current_defi_id = None
     party.meeting_phase  = "vote_defi"
     party.defi_sub_phase = "abdel_processing"
     db.commit()
 
-    # ⚠️ NE PAS broadcaster defi_result:fail ici — déjà fait par defi_vote avant d'appeler cette fonction
+    # Broadcaster le résultat du défi d'Abdel
+    await broadcast(code, "defi_result:fail")
 
     if not infectes:
         party.defi_sub_phase = None
@@ -1489,7 +1485,9 @@ async def next_meeting(code: str, db: Session = Depends(get_db)):
     # Reset des flags de victime pour le nouveau meeting
     db.query(Player).filter(Player.party_id == party.id).update({
         "victim_of_managers": False,
-        "victim_of_claire": False
+        "victim_of_claire": False,
+        "fired_by_stephane": False,
+        "virus_from_abdel": False,
     })
     db.commit()
 
