@@ -319,7 +319,9 @@ def verify_party(code: str, db: Session = Depends(get_db)):
         "code": party.code,
         "is_private": party.is_private,
         "host_id": party.host_id,
-        "status": party.status
+        "status": party.status,
+        "name": party.name  # 🔥 ajouter
+
     }
 
 
@@ -341,8 +343,7 @@ def get_public_parties(db: Session = Depends(get_db)):
         Party.is_private == False,
         Party.status == "waiting"
     ).all()
-    return [{"party_id": p.id, "code": p.code, "host_id": p.host_id} for p in parties]
-
+    return [{"party_id": p.id, "code": p.code, "host_id": p.host_id, "name": p.name} for p in parties]
 
 # ---------------------------------------------------------
 # RÔLE D'UN JOUEUR
