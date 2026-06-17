@@ -1170,6 +1170,58 @@ async def draw_defi(code: str, db: Session = Depends(get_db)):
     return card
 
 # ---------------------------------------------------------
+# MARQUER QU'UN JOUEUR A TIRÉ SA CARTE CORPO
+# ---------------------------------------------------------
+@router.post("/draw_corpocard/{player_id}")
+async def draw_corpocard(player_id: int, db: Session = Depends(get_db)):
+    player = db.query(Player).filter(Player.id == player_id).first()
+    if not player:
+        raise HTTPException(404, "Joueur introuvable")
+    player.has_drawn_corpocard = True
+    db.commit()
+    return {"message": "Carte corpo marquée", "player_id": player_id}
+
+# ---------------------------------------------------------
+# RÉSULTAT DU DÉFI (refus ou timeout)
+# ---------------------------------------------------------
+class DefiResultRequest(BaseModel):
+    player_id: int
+    success: bool
+
+@router.post("/defi_result")
+async def defi_result(request: DefiResultRequest, db: Session = Depends(get_db)):
+    player = db.query(Player).filter(Player.id == request.player_id).first()
+    if not player:
+        raise HTTPException(404, "Joueur introuvable")
+    party = db.query(Party).filter(Party.id == player.party_id).first()
+    if not party:
+        raise HTTPException(404, "Partie introuvable")
+    player.has_drawn_corpocard = True
+    if not request.success:
+        player.is_alive = False
+        player.victim_of_managers = False
+        player.victim_of_claire = False
+        db.commit()
+        if player.role == "Abdel":
+            await _handle_abdel_eliminated(party.code, party, player, db)
+            return {"message": "Abdel éliminé"}
+        alive = db.query(Player).filter(Player.party_id == party.id, Player.is_alive == True).all()
+        if not [p for p in alive if p.is_manager]:
+            await broadcast(party.code, "game_over:victoire_collabs")
+            return {"message": "Victoire Collaborateurs"}
+        if not [p for p in alive if not p.is_manager]:
+            await broadcast(party.code, "game_over:victoire_managers")
+            return {"message": "Victoire Managers"}
+        await broadcast(party.code, f"player_eliminated_direct:{player.pseudo}:{player.role}")
+        await asyncio.sleep(2)
+        await _launch_next_meeting(party.code, party.id, db)
+    else:
+        player.victim_of_managers = False
+        player.victim_of_claire = False
+        db.commit()
+        await broadcast(party.code, "defi_result:success")
+    return {"message": "Résultat défi traité"}
+# ---------------------------------------------------------
 # COLLECTIF — Le CHO déclare le perdant
 # ---------------------------------------------------------
 class CollectifLoserRequest(BaseModel):
