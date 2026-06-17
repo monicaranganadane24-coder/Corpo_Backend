@@ -209,6 +209,7 @@ CORPO_CARDS = [
 
 class CreatePartyRequest(BaseModel):
     pseudo: str
+    name: str = None  
     is_private: bool = False
 
 class JoinPartyRequest(BaseModel):
@@ -242,6 +243,7 @@ def create_party(request: CreatePartyRequest, db: Session = Depends(get_db)):
     party = Party(
         code=code,
         host_id=player.id,
+        name=request.name, 
         is_private=request.is_private,
         status="waiting",
         last_activity=datetime.utcnow()
