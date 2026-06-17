@@ -1484,6 +1484,7 @@ async def _handle_abdel_eliminated(code: str, party, abdel, db):
         party.defi_sub_phase     = "running_from_vote"
         party.turn_order         = json.dumps(victim_ids)
         party.current_turn       = 0
+        print("🔥 Nouvelle victime défi Abdel :", victim_ids[0])
         db.commit()
         await broadcast(code, "phase:defi_decision")
     else:
