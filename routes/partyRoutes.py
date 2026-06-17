@@ -234,6 +234,8 @@ class DefiVoteRequest(BaseModel):
 # ---------------------------------------------------------
 @router.post("/create")
 def create_party(request: CreatePartyRequest, db: Session = Depends(get_db)):
+    print(f"🔍 DEBUG request.name = {repr(request.name)}")
+    
     player = db.query(Player).filter(Player.pseudo == request.pseudo).first()
     if not player:
         raise HTTPException(404, "Pseudo introuvable")
@@ -254,6 +256,8 @@ def create_party(request: CreatePartyRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(party)
 
+    print(f"🔍 DEBUG party.name APRÈS COMMIT = {repr(party.name)}")
+
     player.party_id = party.id
     player.last_seen = datetime.utcnow()
     db.commit()
@@ -265,8 +269,6 @@ def create_party(request: CreatePartyRequest, db: Session = Depends(get_db)):
         "is_private": request.is_private,
         "player_id": player.id
     }
-
-
 # ---------------------------------------------------------
 # REJOINDRE UNE PARTIE
 # ---------------------------------------------------------
