@@ -207,9 +207,11 @@ CORPO_CARDS = [
 
 ]
 
+from typing import Optional
+
 class CreatePartyRequest(BaseModel):
     pseudo: str
-    name: str = None  
+    name: Optional[str] = None
     is_private: bool = False
 
 class JoinPartyRequest(BaseModel):
