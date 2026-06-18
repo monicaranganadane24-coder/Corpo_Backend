@@ -243,6 +243,13 @@ async def _end_meeting_async(code: str, party_id: int):
             await broadcast(code, f"player_eliminated_direct:{first['pseudo']}:{first['role']}")
             await asyncio.sleep(2)
 
+            # 🔥 FIX : si Abdel éliminé directement → traiter les infectés
+            if first["role"] == "Abdel":
+                from routes.partyRoutes import _handle_abdel_eliminated
+                abdel_player = db.query(Player).filter(Player.id == first["id"]).first()
+                await _handle_abdel_eliminated(code, party, abdel_player, db)
+                return
+
             # Vérif fin de partie
             alive_check = db.query(Player).filter(Player.party_id == party_id, Player.is_alive == True).all()
             if not [p for p in alive_check if p.is_manager]:
@@ -423,7 +430,7 @@ async def handle_message(code: str, websocket, message: str):
 
             elif action == "abdel_virus" and target_id:
                 target = db.query(Player).filter(Player.id == int(target_id)).first()
-                if target:
+                if target and target.id != player_id and target.is_alive:
                     target.virus_from_abdel = True
                     db.commit()
 

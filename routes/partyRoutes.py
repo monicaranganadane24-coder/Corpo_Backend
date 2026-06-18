@@ -1128,6 +1128,10 @@ async def _process_next_in_queue(code: str, party_id: int, current_index: int, c
                 db.commit()
                 await broadcast(code, f"player_eliminated_direct:{next_victim.pseudo}:{next_victim.role}")
                 await asyncio.sleep(5)
+                # 🔥 FIX : si Abdel éliminé directement
+                if next_victim.role == "Abdel":
+                    await _handle_abdel_eliminated(code, party, next_victim, db)
+                    return
                 await _process_next_in_queue(code, party_id, next_index, came_from_vote)
             else:
                 party.last_eliminated_id = next_victim_id
@@ -1509,7 +1513,6 @@ async def _launch_next_meeting(code: str, party_id: int, db: Session):
         "victim_of_managers": False,
         "victim_of_claire": False,
         "fired_by_stephane": False,
-        "virus_from_abdel": False,
     })
     db.commit()
 
@@ -1644,7 +1647,6 @@ async def next_meeting(code: str, db: Session = Depends(get_db)):
         "victim_of_managers": False,
         "victim_of_claire": False,
         "fired_by_stephane": False,
-        "virus_from_abdel": False,
     })
     db.commit()
 
