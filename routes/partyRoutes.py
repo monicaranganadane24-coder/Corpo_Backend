@@ -204,8 +204,97 @@ CORPO_CARDS = [
         "instructions": "'J'ai un empêchement familial', 'Je suis malade', 'Ma voiture est en panne'... La majorité valide.",
         "vote_label": "Les mensonges sont-ils convaincants ?"
     },
-
-]
+    {
+    "id": 16, "type": "vote", "timer": 30, "duo": False,
+    "text": "En 30 secondes, fais un pitch pour convaincre ton boss de passer en télétravail 5 jours sur 5.",
+    "instructions": "Sois crédible mais ambitieux. La majorité valide.",
+    "vote_label": "Le télétravail à 100% est-il justifié ?"
+    },
+    {
+    "id": 17, "type": "vote", "timer": 30, "duo": False,
+    "text": "En 30 secondes, raconte ton pire fail professionnel… sans rougir.",
+    "instructions": "Assume ton passé. La majorité valide.",
+    "vote_label": "Le fail est-il suffisamment honteux ?"
+    },
+    {
+    "id": 18, "type": "vote", "timer": 30, "duo": False,
+    "text": "En 30 secondes, propose un slogan corporate totalement nul.",
+    "instructions": "Plus c’est cringe, mieux c’est. La majorité valide.",
+    "vote_label": "Le slogan est-il assez nul ?"
+    },
+    {
+    "id": 19, "type": "vote", "timer": 30, "duo": False,
+    "text": "En 30 secondes, fais un discours de départ comme si tu quittais l'entreprise.",
+    "instructions": "Émotion, drama, larmes… La majorité valide.",
+    "vote_label": "Le discours est-il digne d’un pot de départ ?"
+    },
+    {
+    "id": 20, "type": "vote", "timer": 30, "duo": False,
+    "text": "En 30 secondes, fais une imitation d’un collègue qui parle trop fort en open space.",
+    "instructions": "On veut du réalisme. La majorité valide.",
+    "vote_label": "L’imitation est-elle fidèle ?"
+    },
+    {
+    "id": 21, "type": "vote", "timer": 30, "duo": False,
+    "text": "En 30 secondes, propose 3 idées absurdes pour améliorer la productivité.",
+    "instructions": "Plus c’est absurde, mieux c’est. La majorité valide.",
+    "vote_label": "Les idées sont-elles suffisamment absurdes ?"
+    },
+    {
+    "id": 22, "type": "vote", "timer": 30, "duo": False,
+    "text": "En 30 secondes, raconte une anecdote de bureau totalement inventée.",
+    "instructions": "Fais croire que c’est vrai. La majorité valide.",
+    "vote_label": "L’anecdote est-elle crédible ?"
+    },
+    {
+    "id": 23, "type": "vote", "timer": 30, "duo": False,
+    "text": "En 30 secondes, fais un pitch pour remplacer le PDG.",
+    "instructions": "Ambition maximale. La majorité valide.",
+    "vote_label": "Serait-il/elle un bon PDG ?"
+    },
+    {
+    "id": 24, "type": "vote", "timer": 30, "duo": False,
+    "text": "En 30 secondes, explique pourquoi tu serais un excellent influenceur LinkedIn.",
+    "instructions": "Buzz, storytelling, hashtags. La majorité valide.",
+    "vote_label": "Le potentiel d’influenceur est-il réel ?"
+    },
+    {
+    "id": 25, "type": "vote", "timer": 30, "duo": True,
+    "text": "En duo : en 30 secondes, faites une scène de bureau totalement improvisée.",
+    "instructions": "Impro totale. La majorité valide.",
+    "vote_label": "La scène est-elle réussie ?"
+    },
+    {
+    "id": 26, "type": "vote", "timer": 30, "duo": False,
+    "text": "En 30 secondes, propose un nouveau nom pour l'entreprise… le plus éclaté possible.",
+    "instructions": "Plus c’est nul, mieux c’est. La majorité valide.",
+    "vote_label": "Le nom est-il suffisamment éclaté ?"
+    },
+    {
+    "id": 27, "type": "vote", "timer": 30, "duo": False,
+    "text": "En 30 secondes, fais un pitch pour supprimer toutes les réunions.",
+    "instructions": "Argumente comme si ta vie en dépendait. La majorité valide.",
+    "vote_label": "La suppression des réunions est-elle convaincante ?"
+    },
+    {
+    "id": 28, "type": "vote", "timer": 30, "duo": False,
+    "text": "En 30 secondes, raconte ton premier jour dans l’entreprise… version dramatique.",
+    "instructions": "Suspense, tension, musique imaginaire. La majorité valide.",
+    "vote_label": "Le drama est-il suffisant ?"
+    },
+    {
+    "id": 29, "type": "vote", "timer": 30, "duo": False,
+    "text": "En 30 secondes, fais un pitch pour remplacer la machine à café par quelque chose de pire.",
+    "instructions": "Sois créatif dans le mauvais sens. La majorité valide.",
+    "vote_label": "La proposition est-elle catastrophique ?"
+    },
+    {
+    "id": 30, "type": "vote", "timer": 30, "duo": False,
+    "text": "En 30 secondes, décris ton collègue idéal… mais fais-le totalement absurde.",
+    "instructions": "Plus c’est improbable, mieux c’est. La majorité valide.",
+    "vote_label": "Le collègue idéal est-il assez absurde ?"
+    }
+    ]
 
 from typing import Optional
 

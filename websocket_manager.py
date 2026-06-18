@@ -525,8 +525,19 @@ async def handle_message(code: str, websocket, message: str):
             "batard", "nique", "niquer", "bite", "couille", "couilles",
             "chier", "chieur", "bordel", "fuck", "shit", "bitch", "asshole",
             "bastard", "cunt", "motherfucker", "abruti", "imbécile",
-            "crétin", "débile", "ntr", "tg", "nique ta mère", "ntm", "nique ta grand-mère", "ntgm"
-        ]
+            "crétin", "débile", "ntr", "tg", "nique ta mère", "ntm",
+            "nique ta grand-mère", "ntgm",
+
+    
+            "gouinasse", "bouffon", "bouffonne", "clochard", "clocharde",
+            "charo", "pétasse", "pétard", "gros con", "grosse conne",
+            "sale con", "sale conne", "bougnoule", "youpin", "pédé",
+            "tapette", "gros porc", "porc", "raté", "minable", "toxico",
+            "dégueulasse", "baltringue", "bouffeur de merde", "face de rat",
+            "face de cul", "gros sac", "grosse vache", "grosse truie",
+            "sous-merde", "déchet", "ordure", "crevure", "larve",
+            "vermine", "parasite" ]
+
 
         for mot in MOTS_VULGAIRES:
             if mot in texte_lower:
