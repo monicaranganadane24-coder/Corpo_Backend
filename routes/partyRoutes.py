@@ -1513,6 +1513,8 @@ async def _launch_next_meeting(code: str, party_id: int, db: Session):
         "victim_of_managers": False,
         "victim_of_claire": False,
         "fired_by_stephane": False,
+        "has_used_power": False,   # 🔥 FIX : Claire peut ré-agir chaque meeting
+
     })
     db.commit()
 
@@ -1647,6 +1649,8 @@ async def next_meeting(code: str, db: Session = Depends(get_db)):
         "victim_of_managers": False,
         "victim_of_claire": False,
         "fired_by_stephane": False,
+        "has_used_power": False,   # 🔥 FIX : Claire peut ré-agir chaque meeting
+
     })
     db.commit()
 

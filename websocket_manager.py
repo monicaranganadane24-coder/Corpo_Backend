@@ -286,7 +286,9 @@ async def _launch_next_meeting_ws(code: str, party_id: int):
         db.query(Player).filter(Player.party_id == party_id).update({
             "victim_of_managers": False,
             "victim_of_claire":   False,
-            "fired_by_stephane":  False
+            "fired_by_stephane":  False,
+            "has_used_power":     False,   # 🔥 FIX : Claire peut ré-agir chaque meeting
+
         })
         db.commit()
         await broadcast(code, f"next_meeting:{party.meeting_number}")
