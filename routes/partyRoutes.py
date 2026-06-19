@@ -1185,13 +1185,6 @@ async def _process_next_in_queue(code: str, party_id: int, current_index: int, c
     finally:
         db.close()
 
-
-
-
-
-
-
-
 # ---------------------------------------------------------
 # CINDY — Info secrète sur ses voisins (privée)
 # ---------------------------------------------------------
@@ -1597,7 +1590,7 @@ async def _handle_abdel_eliminated(code: str, party, abdel, db, came_from_vote: 
         party.meeting_phase  = "vote_defi"
         party.defi_sub_phase = "running_from_vote" if came_from_vote else "running_from_meeting"
         db.commit()
-        await broadcast(code, "phase:defi_decision")
+        await broadcast(code, "phase:defnon regarde i_decision")
     else:
         if came_from_vote:
             await _launch_next_meeting(code, party.id, db)
