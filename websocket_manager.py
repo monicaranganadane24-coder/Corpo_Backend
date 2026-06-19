@@ -417,7 +417,7 @@ async def handle_message(code: str, websocket, message: str):
                     if target.role == "Claire":
                         stephane.fired_by_stephane = True
                         db.commit()
-                        await broadcast(code, f"stephane_vu_claire:{stephane.pseudo}")
+                        await broadcast(code, f"stephane_vu_claire:Stéphane")
                 return
 
             elif action == "denis_swap" and target_id:
