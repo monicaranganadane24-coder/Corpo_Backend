@@ -17,51 +17,51 @@ router = APIRouter(prefix="/party", tags=["Party"])
 
 ALL_ROLES = [
     {
-        "name": "Fabien", "title": "Manager Toxique", "team": "Managers", "image": "fabien.png",
+        "name": "Fabien", "title": "Manager Toxique", "team": "Managers", "image": "Fabien.png",
         "description": "Il micro-manage tout le monde en parlant de 'quick wins' et de 'croissance organique'. Quand il te félicite pour ton potentiel, tu sais que c'est ton potentiel de départ.",
         "role_meeting": "Pendant le meeting, tous les Managers ouvrent les yeux, se concertent et désignent secrètement un collaborateur à licencier.",
         "cliches": ["On priorise les quick wins !", "Il faut rester agile !", "Réalignons les ressources stratégiques.", "C'est dans notre roadmap.", "On est en mode pivot."]
     },
     {
-        "name": "Claire", "title": "Responsable RH", "team": "Collaborateurs", "image": "claire.png",
+        "name": "Claire", "title": "Responsable RH", "team": "Collaborateurs", "image": "Claire.png",
         "description": "Elle ADOOOOOOOORE l'humain mais c'est la reine des hypocrites. Quand elle dit 'On est là pour t'accompagner', ta lettre de licenciement est déjà prête.",
         "role_meeting": "Tu peux sauver la victime des Managers ou en désigner une autre. Tu ne peux utiliser ce pouvoir qu'UNE seule fois dans toute la partie.",
         "cliches": ["On va co-construire ensemble !", "Empower Human to bridge the gap.", "Je suis là pour toi.", "On a une politique de bienveillance.", "Le sondage anonyme était vraiment anonyme."]
     },
 
     {
-        "name": "Pascal", "title": "Futur Retraité", "team": "Collaborateurs", "image": "pascal.png",
+        "name": "Pascal", "title": "Futur Retraité", "team": "Collaborateurs", "image": "Pascal.png",
         "description": "Il part à la retraite dans 2 ans et il est invirable. Il a fait toute sa carrière chez Corpo! et une chose est sûre : 'c'était mieux avant'.",
         "role_meeting": "Tu désignes un joueur. Le CHO t'indique si c'est un Manager ou non. Si c'est un Manager, tu peux en désigner un second (2 max par tour).",
         "cliches": ["C'était mieux avant.", "Moi j'ai connu l'époque où...", "Plus que 2 ans et je suis libre !", "De mon temps on faisait pas ça.", "J'ai vu des DG partir, j'en verrai d'autres."]
     },
     {
-        "name": "Tiff", "title": "Responsable Marketing", "team": "Collaborateurs", "image": "tiff.png",
+        "name": "Tiff", "title": "Responsable Marketing", "team": "Collaborateurs", "image": "Tiff.png",
         "description": "Elle parle de TikTok et Instagram mais ses idées finissent en posts LinkedIn gênants. 10 secondes après son post, tu reçois : 'Hello, tu peux liker stp ? :-)'",
         "role_meeting": "Tu choisis 3 mots parmi 5 proposés. Si quelqu'un prononce ces mots dans le chat du feedback, il est licencié !",
         "cliches": ["Tu peux liker mon post stp ? :-)", "On va faire un contenu viral !", "J'ai une idée disruptive pour les réseaux.", "Le reach organique c'est mort.", "On fait du storytelling authentique."]
     },
     {
-        "name": "Stéphane", "title": "Commercial", "team": "Collaborateurs", "image": "stephane.png",
+        "name": "Stéphane", "title": "Commercial", "team": "Collaborateurs", "image": "Stephane.png",
         "description": "Toujours avec sa sacoche, il ne parle que de 'closer des deals'. Il improvise tout mais fait semblant de tout maîtriser.",
         "role_meeting": "Tu désignes un joueur et vous révélez mutuellement vos identités. Attention : si tu tombes sur Claire la RH, tu es licencié !",
         "cliches": ["On va closer ce deal !", "T'as mon numéro, appelle-moi.", "J'ai un afterwork ce soir, vous venez ?", "Mon variable cette année c'est du lourd.", "Je suis en mode chasseur."]
     },
     {
-        "name": "Cindy", "title": "Secrétaire", "team": "Collaborateurs", "image": "cindy.png",
+        "name": "Cindy", "title": "Secrétaire", "team": "Collaborateurs", "image": "Cindy.png",
         "description": "Plus ancienne que ta dernière version Word. Elle t'envoie un mail 'Avec la pièce jointe c'est mieux :-)))'. Toujours sans la pièce jointe.",
         "role_meeting": "Le CHO t'indique si l'un de tes voisins gauche/droite est Manager (sans dire lequel). Tu peux utiliser cette info pour orienter les votes.",
         "cliches": ["Comme convenu, voici la pièce jointe.", "J'ai booké la salle de réunion !", "Tu peux valider mon compte-rendu stp ?", "J'ai transféré ton mail au bon service.", "Des fois je suis un peu fofolle !"]
     },
     {
-        "name": "Denis", "title": "Comptable", "team": "Collaborateurs", "image": "denis.png",
+        "name": "Denis", "title": "Comptable", "team": "Collaborateurs", "image": "Denis.png",
         "description": "Discret, poli, avec un sourire énigmatique qui cache peut-être un million détourné. Il maîtrise tous les raccourcis Excel et verrouille tous ses dossiers.",
         "role_meeting": "Tu peux échanger ton identité avec un autre joueur. Vous découvrez vos nouveaux rôles en secret.",
         "cliches": ["C'est dans le budget.", "J'ai verrouillé le fichier Excel.", "Les chiffres ne mentent pas.", "Il y a des ajustements à prévoir.", "Toujours plus de CA, moins de croissance."]
     },
 
     {
-        "name": "Abdel", "title": "Support IT", "team": "Collaborateurs", "image": "abdel.png",
+        "name": "Abdel", "title": "Support IT", "team": "Collaborateurs", "image": "Abdel.png",
         "description": "La colonne vertébrale invisible de l'entreprise. Il règle tout avec un calme olympien. Mais t'as ouvert un ticket avant de venir le voir ?",
         "role_meeting": "À chaque meeting tu contamines secrètement un joueur avec un virus cyber. Quand tu es éliminé, tous les infectés sont licenciés instantanément !",
         "cliches": ["T'as ouvert un ticket ?", "J'ai lancé la campagne anti-phishing.", "Redémarre et rappelle-moi.", "C'est pas dans mon scope.", "Les règles sont les règles."]
