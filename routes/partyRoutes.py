@@ -1599,8 +1599,12 @@ async def _handle_abdel_eliminated(code: str, party, abdel, db, came_from_vote: 
         db.commit()
         await broadcast(code, "phase:defi_decision")
     else:
-        await _launch_next_meeting(code, party.id, db)
-
+        if came_from_vote:
+            await _launch_next_meeting(code, party.id, db)
+        else:
+            party.meeting_phase = "feedback"
+            db.commit()
+            await broadcast(code, "phase:feedback:pre_vote")
 # ---------------------------------------------------------
 # RÉCUPÉRER LA VICTIME DU MEETING en cours (pour feedback_defi)
 # ---------------------------------------------------------
