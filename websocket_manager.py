@@ -247,7 +247,7 @@ async def _end_meeting_async(code: str, party_id: int):
             if first["role"] == "Abdel":
                 from routes.partyRoutes import _handle_abdel_eliminated
                 abdel_player = db.query(Player).filter(Player.id == first["id"]).first()
-                await _handle_abdel_eliminated(code, party, abdel_player, db)
+                await _handle_abdel_eliminated(code, party, abdel_player, db, came_from_vote=False)                
                 return
 
             # Vérif fin de partie

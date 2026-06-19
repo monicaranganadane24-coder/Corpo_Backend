@@ -711,7 +711,7 @@ async def submit_vote(request: VoteRequest, db: Session = Depends(get_db)):
                 await asyncio.sleep(5)
                 # 🔥 Si Abdel éliminé directement → traiter les infectés
                 if victim.role == "Abdel":
-                    await _handle_abdel_eliminated(party.code, party, victim, db)
+                    await _handle_abdel_eliminated(party.code, party, victim, db, came_from_vote=True)
                     return {"message": "Abdel éliminé direct — infectés traités"}
                 await _launch_next_meeting(party.code, party.id, db)
             else:
@@ -973,7 +973,8 @@ async def defi_vote(request: DefiVoteRequest, db: Session = Depends(get_db)):
         
         # 🔥 Si Abdel est éliminé → broadcaster le résultat D'ABORD puis traiter les infectés
         if eliminated and not eliminated.is_alive and eliminated.role == "Abdel":
-            await _handle_abdel_eliminated(request.party_code, party, eliminated, db)
+            came_from_vote = party.defi_sub_phase == "running_from_vote"
+            await _handle_abdel_eliminated(request.party_code, party, eliminated, db, came_from_vote=came_from_vote)
             return {"message": "Abdel éliminé — infectés traités"}
 
         # Vérif fin de partie
@@ -1531,7 +1532,7 @@ async def _launch_next_meeting(code: str, party_id: int, db: Session):
         db_fresh.close()
         
         
-async def _handle_abdel_eliminated(code: str, party, abdel, db):
+async def _handle_abdel_eliminated(code: str, party, abdel, db, came_from_vote: bool = False):
     infectes = db.query(Player).filter(
         Player.party_id == party.id,
         Player.virus_from_abdel == True,
@@ -1594,7 +1595,7 @@ async def _handle_abdel_eliminated(code: str, party, abdel, db):
 
     if victims_with_joker:
         party.meeting_phase  = "vote_defi"
-        party.defi_sub_phase = "running_from_vote"
+        party.defi_sub_phase = "running_from_vote" if came_from_vote else "running_from_meeting"
         db.commit()
         await broadcast(code, "phase:defi_decision")
     else:
