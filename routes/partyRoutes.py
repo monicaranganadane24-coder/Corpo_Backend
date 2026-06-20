@@ -106,7 +106,6 @@ TIFF_MOTS_DISPONIBLES = [
 # "vote"    → la majorité décide (succès/échec)
 # "direct"  → effet immédiat sans vote
 # "duo"     → avec l'aide d'un autre joueur + vote
-# "collectif" → tout le monde joue + vote
 
 CORPO_CARDS = [
 
@@ -117,7 +116,7 @@ CORPO_CARDS = [
     {
         "id": 1, "type": "vote", "timer": 30, "duo": False,
         "text": "En 30 secondes, pitche ton augmentation salariale.",
-        "instructions": "Convaincs la majorité que tu mérites une augmentation. Si la majorité valide → tu restes !",
+        "instructions": "On sait tous que l'augmentation, tu ne l'auras pas. Alors bon courage !",
         "vote_label": "Mérite-t-il/elle une augmentation ?"
     },
     {
