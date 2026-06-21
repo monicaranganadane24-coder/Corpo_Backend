@@ -64,7 +64,7 @@ async def register(data: PlayerCreate, db: Session = Depends(get_db)):
     db.refresh(new_player)
 
     # Envoi du mail de bienvenue
-    await send_confirmation_email(
+    send_confirmation_email(
     to_email=data.email,
     subject="Bienvenue chez Corpo! 🎮",
     content=f"""

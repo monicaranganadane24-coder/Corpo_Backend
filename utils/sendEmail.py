@@ -2,9 +2,9 @@ import os
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
-async def send_confirmation_email(to_email: str, subject: str, content: str):
+def send_confirmation_email(to_email: str, subject: str, content: str):
     try:
-        api_key     = os.getenv("SENDGRID_API_KEY")
+        api_key      = os.getenv("SENDGRID_API_KEY")
         sender_email = os.getenv("SENDER_EMAIL")
 
         message = Mail(
