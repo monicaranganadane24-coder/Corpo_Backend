@@ -1,24 +1,27 @@
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 import os
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
 
 async def send_confirmation_email(to_email: str, subject: str, content: str):
     try:
-        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
-        from_email = os.getenv("MAIL_FROM")
+        smtp_user     = os.getenv("GMAIL_USER")     # monicaranganadane24@gmail.com
+        smtp_password = os.getenv("GMAIL_PASSWORD") # mot de passe d'application Google
 
-        message = Mail(
-            from_email=from_email,
-            to_emails=to_email,
-            subject=subject,
-            html_content=content
-        )
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"]    = smtp_user
+        msg["To"]      = to_email
 
-        response = sg.send(message)
-        print("SendGrid status:", response.status_code)
+        msg.attach(MIMEText(content, "html"))
 
-        return response.status_code == 202
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(smtp_user, smtp_password)
+            server.sendmail(smtp_user, to_email, msg.as_string())
+
+        print(f"✅ Mail envoyé à {to_email}")
+        return True
 
     except Exception as e:
-        print("Erreur SendGrid:", e)
+        print(f"⚠️ Erreur envoi mail : {e}")
         return False
