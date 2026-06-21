@@ -529,23 +529,49 @@ async def handle_message(code: str, websocket, message: str):
 
         # 1. Filtre mots vulgaires
         MOTS_VULGAIRES = [
-            "putain", "merde", "connard", "connasse", "salope", "enculé",
-            "enculer", "encule", "fils de pute", "fdp", "pute", "bâtard",
-            "batard", "nique", "niquer", "bite", "couille", "couilles",
-            "chier", "chieur", "bordel", "fuck", "shit", "bitch", "asshole",
-            "bastard", "cunt", "motherfucker", "abruti", "imbécile",
-            "crétin", "débile", "ntr", "tg", "nique ta mère", "ntm",
-            "nique ta grand-mère", "ntgm",
+        "putain", "merde", "connard", "connasse", "salope", "enculé",
+        "enculer", "encule", "fils de pute", "fdp", "pute", "bâtard",
+        "batard", "nique", "niquer", "bite", "couille", "couilles",
+        "chier", "chieur", "bordel", "fuck", "shit", "bitch", "asshole",
+        "bastard", "cunt", "motherfucker", "abruti", "imbécile",
+        "crétin", "débile", "ntr", "tg", "nique ta mère", "ntm",
+        "nique ta grand-mère", "ntgm",
 
-    
-            "gouinasse", "bouffon", "bouffonne", "clochard", "clocharde",
-            "charo", "pétasse", "pétard", "gros con", "grosse conne",
-            "sale con", "sale conne", "bougnoule", "youpin", "pédé",
-            "tapette", "gros porc", "porc", "raté", "minable", "toxico",
-            "dégueulasse", "baltringue", "bouffeur de merde", "face de rat",
-            "face de cul", "gros sac", "grosse vache", "grosse truie",
-            "sous-merde", "déchet", "ordure", "crevure", "larve",
-            "vermine", "parasite" ]
+        "gouinasse", "bouffon", "bouffonne", "clochard", "clocharde",
+        "charo", "pétasse", "pétard", "gros con", "grosse conne",
+        "sale con", "sale conne", "pédé", "tapette", "gros porc",
+        "porc", "raté", "minable", "toxico", "dégueulasse",
+        "baltringue", "bouffeur de merde", "face de rat",
+        "face de cul", "gros sac", "grosse vache", "grosse truie",
+        "sous-merde", "déchet", "ordure", "crevure", "larve",
+        "vermine", "parasite",
+
+        "clodo", "branleur", "branleuse", "enculette", "merdeux",
+        "merdeuse", "trou du cul", "trouduc", "glandu", "glandeuse",
+        "glandeur", "boulet", "boulette", "bouffiasse", "pouffiasse",
+        "pouf", "pouff", "pouffonne", "tocard", "tocarde", "minus",
+        "clown", "clownesque", "guignol", "guignole", "andouille",
+        "truffe", "blaireau", "blairelle", "pignouf", "pignoufe",
+        "pouilleux", "pouilleuse", "cafard", "cafardeux", "cafardeuse",
+        "crasseux", "crasseuse", "crado", "cradot", "cradotte",
+        "cradouille", "crapule", "fumier", "fumière", "charogne",
+        "charognard", "charognarde", "peste", "pestiféré",
+        "pestiférée", "pestouille", "morveux", "morveuse",
+        "parasite humain", "parasite social", "raton", "ratonne",
+        "rat de bureau", "rat de cave", "clochardisé", "dépravé",
+        "dépravée", "détraqué", "détraquée", "dérangé", "dérangée",
+        "cinglé", "cinglée", "psychopathe", "sociopathe",
+        "malade mental", "malade", "terroriste", "criminel",
+        "criminelle", "délinquant", "délinquante", "forcené",
+        "forcenée", "barbare", "sauvage", "sauvageon", "sauvageonne",
+        "monstre", "monstruosité", "ogre", "ogresse", "boucher",
+        "bouchère", "tyran", "dictateur", "dictatrice", "brute",
+        "brute épaisse", "brutasse", "brutal", "brutale",
+
+        "dickhead", "jackass", "dipshit", "dumbass", "retard",
+        "prick", "wanker", "twat", "scumbag", "douchebag",
+        "slut", "whore", "skank", "hoe"
+]
 
 
         for mot in MOTS_VULGAIRES:

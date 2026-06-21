@@ -1,8 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from database.connection import SessionLocal
 from models.playerModel import Player
 from models.playerSchema import PlayerCreate
+import sendgrid
+from sendgrid.helpers.mail import Mail
+import os
 
 router = APIRouter(prefix="/account", tags=["Account"])
 
@@ -14,7 +18,27 @@ def get_db():
         db.close()
 
 
-# 🔥 INSCRIPTION SANS MOT DE PASSE
+# ---------------------------------------------------------
+# Vérifier si un email existe déjà
+# ---------------------------------------------------------
+class CheckEmailRequest(BaseModel):
+    email: str
+
+@router.post("/check_email")
+def check_email(request: CheckEmailRequest, db: Session = Depends(get_db)):
+    player = db.query(Player).filter(Player.email == request.email).first()
+    if player:
+        return {
+            "exists":    True,
+            "pseudo":    player.pseudo,
+            "player_id": player.id
+        }
+    return {"exists": False}
+
+
+# ---------------------------------------------------------
+# INSCRIPTION
+# ---------------------------------------------------------
 @router.post("/register")
 async def register(data: PlayerCreate, db: Session = Depends(get_db)):
 
@@ -28,33 +52,59 @@ async def register(data: PlayerCreate, db: Session = Depends(get_db)):
     if existing_pseudo:
         raise HTTPException(status_code=400, detail="Pseudo déjà utilisé")
 
-    # Création du joueur SANS mot de passe
+    # Création du joueur
     new_player = Player(
         pseudo=data.pseudo,
         email=data.email,
-        password="",   # plus de mot de passe
+        password="",
         confirmed=True
     )
-
     db.add(new_player)
     db.commit()
     db.refresh(new_player)
 
-    return {"message": "Compte créé avec succès !"}
+    # Envoi du mail de bienvenue
+    try:
+        sg = sendgrid.SendGridAPIClient(api_key=os.environ.get("SENDGRID_API_KEY"))
+        message = Mail(
+            from_email="monicaranganadane24@gmail.com",
+            to_emails=data.email,
+            subject="Bienvenue chez Corpo! 🎮",
+            html_content=f"""
+            <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;padding:20px;">
+                <h1 style="color:#c0392b;">Bienvenue chez Corpo! 🎉</h1>
+                <p>Bonjour <strong>{data.pseudo}</strong>,</p>
+                <p>Votre compte a été créé avec succès !</p>
+                <p>Vous pouvez maintenant rejoindre ou créer des meetings et jouer avec vos collègues.</p>
+                <br>
+                <p style="color:#888;font-size:12px;">L'équipe Corpo!</p>
+            </div>
+            """
+        )
+        sg.send(message)
+    except Exception as e:
+        print(f"⚠️ Erreur envoi mail : {e}")
+        # On ne bloque pas la création si le mail échoue
+
+    return {
+        "message":   "Compte créé avec succès !",
+        "player_id": new_player.id,
+        "pseudo":    new_player.pseudo
+    }
 
 
-# 🔥 CONNEXION AVEC EMAIL UNIQUEMENT
+# ---------------------------------------------------------
+# CONNEXION
+# ---------------------------------------------------------
 @router.post("/login")
 def login(data: dict, db: Session = Depends(get_db)):
     email = data.get("email")
-
-    # Vérifier si le joueur existe
     player = db.query(Player).filter(Player.email == email).first()
     if not player:
         raise HTTPException(status_code=404, detail="Email introuvable")
-
     return {
-        "message": "Connexion réussie",
-        "pseudo": player.pseudo,
-        "email": player.email
+        "message":   "Connexion réussie",
+        "pseudo":    player.pseudo,
+        "player_id": player.id,
+        "email":     player.email
     }
