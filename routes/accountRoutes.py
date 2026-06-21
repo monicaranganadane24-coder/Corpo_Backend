@@ -4,9 +4,9 @@ from pydantic import BaseModel
 from database.connection import SessionLocal
 from models.playerModel import Player
 from models.playerSchema import PlayerCreate
-import sendgrid
-from sendgrid.helpers.mail import Mail
 import os
+from utils.sendEmail import send_confirmation_email
+
 
 router = APIRouter(prefix="/account", tags=["Account"])
 
@@ -64,26 +64,20 @@ async def register(data: PlayerCreate, db: Session = Depends(get_db)):
     db.refresh(new_player)
 
     # Envoi du mail de bienvenue
-    try:
-        sg = sendgrid.SendGridAPIClient(api_key=os.environ.get("SENDGRID_API_KEY"))
-        message = Mail(
-            from_email="monicaranganadane24@gmail.com",
-            to_emails=data.email,
-            subject="Bienvenue chez Corpo! 🎮",
-            html_content=f"""
-            <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;padding:20px;">
-                <h1 style="color:#c0392b;">Bienvenue chez Corpo! 🎉</h1>
-                <p>Bonjour <strong>{data.pseudo}</strong>,</p>
-                <p>Votre compte a été créé avec succès !</p>
-                <p>Vous pouvez maintenant rejoindre ou créer des meetings et jouer avec vos collègues.</p>
-                <br>
-                <p style="color:#888;font-size:12px;">L'équipe Corpo!</p>
-            </div>
-            """
-        )
-        sg.send(message)
-    except Exception as e:
-        print(f"⚠️ Erreur envoi mail : {e}")
+    await send_confirmation_email(
+    to_email=data.email,
+    subject="Bienvenue chez Corpo! 🎮",
+    content=f"""
+    <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;padding:20px;">
+        <h1 style="color:#c0392b;">Bienvenue chez Corpo! 🎉</h1>
+        <p>Bonjour <strong>{data.pseudo}</strong>,</p>
+        <p>Votre compte a été créé avec succès !</p>
+        <p>Vous pouvez maintenant rejoindre ou créer des meetings et jouer avec vos collègues.</p>
+        <br>
+        <p style="color:#888;font-size:12px;">L'équipe Corpo!</p>
+    </div>
+    """
+)
         # On ne bloque pas la création si le mail échoue
 
     return {
