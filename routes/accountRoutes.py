@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from database.connection import SessionLocal
@@ -40,7 +40,7 @@ def check_email(request: CheckEmailRequest, db: Session = Depends(get_db)):
 # INSCRIPTION
 # ---------------------------------------------------------
 @router.post("/register")
-async def register(data: PlayerCreate, db: Session = Depends(get_db)):
+def register(data: PlayerCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
 
     # Vérifier si email existe déjà
     existing = db.query(Player).filter(Player.email == data.email).first()
@@ -63,22 +63,22 @@ async def register(data: PlayerCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_player)
 
-    # Envoi du mail de bienvenue
-    send_confirmation_email(
-    to_email=data.email,
-    subject="Bienvenue chez Corpo! 🎮",
-    content=f"""
-    <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;padding:20px;">
-        <h1 style="color:#c0392b;">Bienvenue chez Corpo! 🎉</h1>
-        <p>Bonjour <strong>{data.pseudo}</strong>,</p>
-        <p>Votre compte a été créé avec succès !</p>
-        <p>Vous pouvez maintenant rejoindre ou créer des meetings et jouer avec vos collègues.</p>
-        <br>
-        <p style="color:#888;font-size:12px;">L'équipe Corpo!</p>
-    </div>
-    """
-)
-        # On ne bloque pas la création si le mail échoue
+    # Envoi du mail en arrière-plan — ne bloque pas la réponse
+    background_tasks.add_task(
+        send_confirmation_email,
+        to_email=data.email,
+        subject="Bienvenue chez Corpo! 🎮",
+        content=f"""
+        <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;padding:20px;">
+            <h1 style="color:#c0392b;">Bienvenue chez Corpo! 🎉</h1>
+            <p>Bonjour <strong>{data.pseudo}</strong>,</p>
+            <p>Votre compte a été créé avec succès !</p>
+            <p>Vous pouvez maintenant rejoindre ou créer des meetings et jouer avec vos collègues.</p>
+            <br>
+            <p style="color:#888;font-size:12px;">L'équipe Corpo!</p>
+        </div>
+        """
+    )
 
     return {
         "message":   "Compte créé avec succès !",
