@@ -69,13 +69,15 @@ def register(data: PlayerCreate, background_tasks: BackgroundTasks, db: Session 
         to_email=data.email,
         subject="Bienvenue chez Corpo! 🎮",
         content=f"""
-        <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;padding:20px;">
-            <h1 style="color:#c0392b;">Bienvenue chez Corpo! 🎉</h1>
+        <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;padding:20px;border:1px solid #eee;border-radius:8px;">
+            <h1 style="color:#c0392b;margin-bottom:20px;">Bienvenue dans l'Open-Space ! 🎉</h1>
             <p>Bonjour <strong>{data.pseudo}</strong>,</p>
-            <p>Votre compte a été créé avec succès !</p>
-            <p>Vous pouvez maintenant rejoindre ou créer des meetings et jouer avec vos collègues.</p>
+            <p>Félicitations, ton processus d'onboarding est validé. Ton badge virtuel et ton accès à la machine à café sont désormais actifs !</p>
+            <p>Toi aussi, tu frôles le burn-out rien qu'en lisant un compte-rendu de réunion ? Parfait. Il est temps de saboter tes collègues ou de licencier tes managers toxiques avant qu'ils ne te virent.</p>
+            <p style="margin-top:20px;"><strong>Ton premier meeting t'attend... Ne sois pas en retard (ça fait mauvais genre).</strong></p>
             <br>
-            <p style="color:#888;font-size:12px;">L'équipe Corpo!</p>
+            <hr style="border:none;border-top:1px solid #eee;">
+            <p style="color:#888;font-size:12px;margin-top:15px;">Cordialement,<br><strong>La Direction de Corpo!</strong><br><span style="font-style:italic;">"Travailler plus pour trahir plus."</span></p>
         </div>
         """
     )
