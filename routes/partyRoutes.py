@@ -857,17 +857,11 @@ async def submit_vote(request: VoteRequest, db: Session = Depends(get_db)):
                 has_joker = [v for v in victims if v.has_drawn_corpocard]
 
                 if len(no_joker) == 0:
-                    # Tous ont déjà le joker → défis à tour de rôle
-                    names = [v.pseudo for v in victims]
-                    await broadcast(party.code, f"egalite_defis:{','.join(names)}")
-                    await asyncio.sleep(3)
-                    party.last_eliminated_id = victims[0].id
-                    party.turn_order   = json.dumps(eliminated_ids)
-                    party.current_turn = 0
-                    party.meeting_phase  = "vote_defi"
-                    party.defi_sub_phase = "running_from_vote"
+                    # Tous ont déjà utilisé leur joker → match nul direct
+                    for v in victims:
+                        v.is_alive = False
                     db.commit()
-                    await broadcast(party.code, "phase:defi_decision")
+                    await broadcast(party.code, "game_over:match_nul")
 
                 elif len(no_joker) == 1 and len(has_joker) >= 1:
                     # Un sans joker → il est éliminé directement
