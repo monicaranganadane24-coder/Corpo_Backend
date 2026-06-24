@@ -102,15 +102,12 @@ TIFF_MOTS_DISPONIBLES = [
     "assertif", "besoin d'aide sur des sujets ?", "mobilité interne", "trust-office",
 ]
 
-# Types de défis :
-# "vote"    → la majorité décide (succès/échec)
-# "direct"  → effet immédiat sans vote
-# "duo"     → avec l'aide d'un autre joueur + vote
+    # DÉFIS INDIVIDUELS
 
 CORPO_CARDS = [
 
     # ══════════════════════════════
-    # 15 DÉFIS INDIVIDUELS
+    # 80 DÉFIS INDIVIDUELS
     # ══════════════════════════════
 
     {
