@@ -111,422 +111,422 @@ CORPO_CARDS = [
     # ══════════════════════════════
 
     {
-        "id": 1, "type": "vote", "timer": 40, "duo": False,
-        "text": "En 40 secondes, pitche ton augmentation salariale.",
+        "id": 1, "type": "vote", "timer": 45, "duo": False,
+        "text": "En 45 secondes, pitche ton augmentation salariale.",
         "instructions": "On sait tous que l'augmentation, tu ne l'auras pas. Alors bon courage !",
         "vote_label": "Mérite-t-il/elle une augmentation ?"
     },
     {
-        "id": 2, "type": "vote", "timer": 40, "duo": False,
-        "text": "En 40 secondes, donne 5 politiques RSE que tu mettrais en place chez Corpo!",
+        "id": 2, "type": "vote", "timer": 45, "duo": False,
+        "text": "En 45 secondes, donne 5 politiques RSE que tu mettrais en place chez Corpo!",
         "instructions": "Sois convaincant(e) ! La majorité valide ou non.",
         "vote_label": "Les propositions RSE sont-elles convaincantes ?"
     },
     {
-        "id": 3, "type": "vote", "timer": 40, "duo": False,
-        "text": "En 40 secondes, cite 10 mots franglais du monde de l'entreprise.",
+        "id": 3, "type": "vote", "timer": 45, "duo": False,
+        "text": "En 45 secondes, cite 10 mots franglais du monde de l'entreprise.",
         "instructions": "Synergies, quick wins, roadmap... t'en as d'autres ? La majorité valide.",
         "vote_label": "A-t-il/elle réussi les 10 mots franglais ?"
     },
     {
-        "id": 4, "type": "vote", "timer": 40, "duo": False,
-        "text": "Sais-tu ce que signifie 'assertif' ? En 40 secondes, donne une définition.",
+        "id": 4, "type": "vote", "timer": 45, "duo": False,
+        "text": "Sais-tu ce que signifie 'assertif' ? En 45 secondes, donne une définition.",
         "instructions": "C'est pas juste 'confiant en soi'... ou si ? La majorité valide.",
         "vote_label": "La définition est-elle correcte ?"
     },
     {
-        "id": 5, "type": "vote", "timer": 40, "duo": False,
-        "text": "Tu arrives en retard au meeting. En 40 secondes, explique ta mésaventure.",
+        "id": 5, "type": "vote", "timer": 45, "duo": False,
+        "text": "Tu arrives en retard au meeting. En 45 secondes, explique ta mésaventure.",
         "instructions": "Trouve la meilleure excuse de l'histoire ! Si la majorité valide, tu restes.",
         "vote_label": "L'excuse est-elle recevable ?"
     },
     {
-        "id": 6, "type": "vote", "timer": 40, "duo": False,
-        "text": "En 40 secondes, pitche un post LinkedIn inspirant pour recruter. N'oublie pas les #hashtags !",
+        "id": 6, "type": "vote", "timer": 45, "duo": False,
+        "text": "En 45 secondes, pitche un post LinkedIn inspirant pour recruter. N'oublie pas les #hashtags !",
         "instructions": "Sois authentique, bienveillant et disruptif à la fois ! La majorité valide.",
         "vote_label": "Ce post mérite-t-il des likes ?"
     },
     {
-        "id": 7, "type": "vote", "timer": 40, "duo": False,
-        "text": "Sais-tu réellement à quoi sert un Manager ? En 40 secondes, explique.",
+        "id": 7, "type": "vote", "timer": 45, "duo": False,
+        "text": "Sais-tu réellement à quoi sert un Manager ? En 45 secondes, explique.",
         "instructions": "Prends le temps de réfléchir... La majorité valide.",
         "vote_label": "L'explication tient-elle la route ?"
     },
     {
-        "id": 8, "type": "vote", "timer": 40, "duo": False,
-        "text": "En 40 secondes, décris comment tu vas résoudre la panne d'imprimante.",
+        "id": 8, "type": "vote", "timer": 45, "duo": False,
+        "text": "En 45 secondes, décris comment tu vas résoudre la panne d'imprimante.",
         "instructions": "L'imprimante ne répond plus depuis 3 jours... Si la majorité valide, tu restes.",
         "vote_label": "La solution est-elle crédible ?"
     },
     {
-        "id": 9, "type": "vote", "timer": 40, "duo": False,
-        "text": "En 40 secondes, fais un pitch de création de startup innovante.",
+        "id": 9, "type": "vote", "timer": 45, "duo": False,
+        "text": "En 45 secondes, fais un pitch de création de startup innovante.",
         "instructions": "L'appli qui va changer le monde, c'est maintenant ! La majorité valide.",
         "vote_label": "Cette startup mérite-t-elle un financement ?"
     },
     {
-        "id": 10, "type": "vote", "timer": 40, "duo": False,
-        "text": "Tu as mis une LV3 sur ton CV ? Parle pendant 40 secondes dans cette langue.",
+        "id": 10, "type": "vote", "timer": 45, "duo": False,
+        "text": "Tu as mis une LV3 sur ton CV ? Parle pendant 45 secondes dans cette langue.",
         "instructions": "Espéranto, mandarin, klingon... à toi ! La majorité valide.",
         "vote_label": "La performance linguistique est-elle convaincante ?"
     },
     {
-        "id": 11, "type": "vote", "timer": 40, "duo": False,
-        "text": "En 40 secondes, fais une imitation d'une réunion Teams typique qui commence mal.",
+        "id": 11, "type": "vote", "timer": 45, "duo": False,
+        "text": "En 45 secondes, fais une imitation d'une réunion Teams typique qui commence mal.",
         "instructions": "'T'es sur mute !' 'Je vous entends pas...' Go ! La majorité valide.",
         "vote_label": "L'imitation est-elle réussie ?"
     },
     {
-        "id": 12, "type": "vote", "timer": 40, "duo": True,
-        "text": "Tu as 40 secondes. Convaincs l'entreprise de t'accorder une augmentation en 3 arguments maximum.",
+        "id": 12, "type": "vote", "timer": 45, "duo": True,
+        "text": "Tu as 45 secondes. Convaincs l'entreprise de t'accorder une augmentation en 3 arguments maximum.",
         "instructions": "Sois percutant et droit au but ! Si la majorité valide → tu restes !",
         "vote_label": "Les arguments méritent-ils une augmentation ?"
     },
     {
-        "id": 13, "type": "vote", "timer": 40, "duo": False,
-        "text": "En 40 secondes, cite 2 citations inspirantes.",
+        "id": 13, "type": "vote", "timer": 45, "duo": False,
+        "text": "En 45 secondes, cite 2 citations inspirantes.",
         "instructions": "Nelson Mandela, Gandhi, ou LinkedIn ? La majorité valide.",
         "vote_label": "Les citations sont-elles convaincantes ?"
     },
     {
-        "id": 14, "type": "vote", "timer": 40, "duo": False,
-        "text": "En 40 secondes, cite 3 défauts de l'entreprise.",
+        "id": 14, "type": "vote", "timer": 45, "duo": False,
+        "text": "En 45 secondes, cite 3 défauts de l'entreprise.",
         "instructions": "Des défauts constructifs hein, pas juste 'la machine à café est nulle'... La majorité valide.",
         "vote_label": "Les défauts sont-ils pertinents ?"
     },
     {
-        "id": 15, "type": "vote", "timer": 40, "duo": False,
-        "text": "En 40 secondes, cite 3 mensonges classiques pour justifier une absence au travail.",
+        "id": 15, "type": "vote", "timer": 45, "duo": False,
+        "text": "En 45 secondes, cite 3 mensonges classiques pour justifier une absence au travail.",
         "instructions": "'J'ai un empêchement familial', 'Je suis malade', 'Ma voiture est en panne'... La majorité valide.",
         "vote_label": "Les mensonges sont-ils convaincants ?"
     },
     {
-    "id": 16, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, fais un pitch pour convaincre ton boss de passer en télétravail 5 jours sur 5.",
+    "id": 16, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, fais un pitch pour convaincre ton boss de passer en télétravail 5 jours sur 5.",
     "instructions": "Sois crédible mais ambitieux. La majorité valide.",
     "vote_label": "Le télétravail à 100% est-il justifié ?"
     },
     {
-    "id": 17, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, raconte ton pire fail professionnel… sans rougir.",
+    "id": 17, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, raconte ton pire fail professionnel… sans rougir.",
     "instructions": "Assume ton passé. La majorité valide.",
     "vote_label": "Le fail est-il suffisamment honteux ?"
     },
     {
-    "id": 18, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, propose un slogan corporate totalement nul.",
+    "id": 18, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, propose un slogan corporate totalement nul.",
     "instructions": "Plus c’est cringe, mieux c’est. La majorité valide.",
     "vote_label": "Le slogan est-il assez nul ?"
     },
     {
-    "id": 19, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, fais un discours de départ comme si tu quittais l'entreprise.",
+    "id": 19, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, fais un discours de départ comme si tu quittais l'entreprise.",
     "instructions": "Émotion, drama, larmes… La majorité valide.",
     "vote_label": "Le discours est-il digne d’un pot de départ ?"
     },
     {
-    "id": 20, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, fais une imitation d’un collègue qui parle trop fort en open space.",
+    "id": 20, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, fais une imitation d’un collègue qui parle trop fort en open space.",
     "instructions": "On veut du réalisme. La majorité valide.",
     "vote_label": "L’imitation est-elle fidèle ?"
     },
     {
-    "id": 21, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, propose 3 idées absurdes pour améliorer la productivité.",
+    "id": 21, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, propose 3 idées absurdes pour améliorer la productivité.",
     "instructions": "Plus c’est absurde, mieux c’est. La majorité valide.",
     "vote_label": "Les idées sont-elles suffisamment absurdes ?"
     },
     {
-    "id": 22, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, raconte une anecdote de bureau totalement inventée.",
+    "id": 22, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, raconte une anecdote de bureau totalement inventée.",
     "instructions": "Fais croire que c’est vrai. La majorité valide.",
     "vote_label": "L’anecdote est-elle crédible ?"
     },
     {
-    "id": 23, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, fais un pitch pour remplacer le PDG.",
+    "id": 23, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, fais un pitch pour remplacer le PDG.",
     "instructions": "Ambition maximale. La majorité valide.",
     "vote_label": "Serait-il/elle un bon PDG ?"
     },
     {
-    "id": 24, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, explique pourquoi tu serais un excellent influenceur LinkedIn.",
+    "id": 24, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, explique pourquoi tu serais un excellent influenceur LinkedIn.",
     "instructions": "Buzz, storytelling, hashtags. La majorité valide.",
     "vote_label": "Le potentiel d’influenceur est-il réel ?"
     },
     {
-    "id": 25, "type": "vote", "timer": 40, "duo": True,
-    "text": "En duo : en 40 secondes, faites une scène de bureau totalement improvisée.",
+    "id": 25, "type": "vote", "timer": 45, "duo": True,
+    "text": "En duo : en 45 secondes, faites une scène de bureau totalement improvisée.",
     "instructions": "Impro totale. La majorité valide.",
     "vote_label": "La scène est-elle réussie ?"
     },
     {
-    "id": 26, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, propose un nouveau nom pour l'entreprise… le plus éclaté possible.",
+    "id": 26, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, propose un nouveau nom pour l'entreprise… le plus éclaté possible.",
     "instructions": "Plus c’est nul, mieux c’est. La majorité valide.",
     "vote_label": "Le nom est-il suffisamment éclaté ?"
     },
     {
-    "id": 27, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, fais un pitch pour supprimer toutes les réunions.",
+    "id": 27, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, fais un pitch pour supprimer toutes les réunions.",
     "instructions": "Argumente comme si ta vie en dépendait. La majorité valide.",
     "vote_label": "La suppression des réunions est-elle convaincante ?"
     },
     {
-    "id": 28, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, raconte ton premier jour dans l’entreprise… version dramatique.",
+    "id": 28, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, raconte ton premier jour dans l’entreprise… version dramatique.",
     "instructions": "Suspense, tension, musique imaginaire. La majorité valide.",
     "vote_label": "Le drama est-il suffisant ?"
     },
     {
-    "id": 29, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, fais un pitch pour remplacer la machine à café par quelque chose de pire.",
+    "id": 29, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, fais un pitch pour remplacer la machine à café par quelque chose de pire.",
     "instructions": "Sois créatif dans le mauvais sens. La majorité valide.",
     "vote_label": "La proposition est-elle catastrophique ?"
     },
     {
-    "id": 40, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, décris ton collègue idéal… mais fais-le totalement absurde.",
+    "id": 45, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, décris ton collègue idéal… mais fais-le totalement absurde.",
     "instructions": "Plus c’est improbable, mieux c’est. La majorité valide.",
     "vote_label": "Le collègue idéal est-il assez absurde ?"
     },
     {
-    "id": 41, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, écris le mail de démission le plus dramatique possible.",
+    "id": 41, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, écris le mail de démission le plus dramatique possible.",
     "instructions": "On veut du drama, des larmes, et un peu de vengeance passive-agressive.",
     "vote_label": "Le mail est-il suffisamment dramatique ?"
 },
 {
-    "id": 42, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, invente une excuse crédible pour expliquer un retard de 2 heures.",
+    "id": 42, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, invente une excuse crédible pour expliquer un retard de 2 heures.",
     "instructions": "Plus c’est crédible et absurde à la fois, mieux c’est.",
     "vote_label": "L’excuse est-elle acceptable ?"
 },
 {
-    "id": 43, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, rédige un post LinkedIn après avoir réussi à changer une ampoule.",
+    "id": 43, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, rédige un post LinkedIn après avoir réussi à changer une ampoule.",
     "instructions": "Transforme un geste banal en exploit entrepreneurial.",
     "vote_label": "Le post est-il digne d’un influenceur LinkedIn ?"
 },
 {
-    "id": 44, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, trouve 10 mots corporate que personne n'utilise dans la vraie vie.",
+    "id": 44, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, trouve 10 mots corporate que personne n'utilise dans la vraie vie.",
     "instructions": "Plus c’est incompréhensible, mieux c’est.",
     "vote_label": "Les mots sont-ils suffisamment corporate ?"
 },
 {
-    "id": 45, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, invente un nouveau métier qui n'existe pas encore.",
+    "id": 45, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, invente un nouveau métier qui n'existe pas encore.",
     "instructions": "Un métier inutile mais payé très cher, évidemment.",
     "vote_label": "Le métier est-il innovant (et inutile) ?"
 },
 {
-    "id": 46, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, écris le slogan le plus nul pour une startup.",
+    "id": 46, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, écris le slogan le plus nul pour une startup.",
     "instructions": "Plus c’est éclaté, mieux c’est.",
     "vote_label": "Le slogan est-il suffisamment nul ?"
 },
 {
-    "id": 47, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, décris ton manager idéal avec seulement 5 emojis.",
+    "id": 47, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, décris ton manager idéal avec seulement 5 emojis.",
     "instructions": "Les emojis doivent raconter une histoire.",
     "vote_label": "Les emojis décrivent-ils un vrai manager idéal ?"
 },
 {
-    "id": 48, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, invente une politique RH totalement absurde.",
+    "id": 48, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, invente une politique RH totalement absurde.",
     "instructions": "Quelque chose que même Corpo! n’oserait pas.",
     "vote_label": "La politique est-elle suffisamment absurde ?"
 },
 {
-    "id": 49, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, crée un hashtag LinkedIn ridicule.",
+    "id": 49, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, crée un hashtag LinkedIn ridicule.",
     "instructions": "Plus c’est cringe, mieux c’est.",
     "vote_label": "Le hashtag est-il ridiculement corporate ?"
 },
 {
-    "id": 50, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, trouve 5 excuses pour quitter une réunion plus tôt.",
+    "id": 50, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, trouve 5 excuses pour quitter une réunion plus tôt.",
     "instructions": "On veut des excuses créatives et crédibles.",
     "vote_label": "Les excuses sont-elles valables ?"
 },
 {
-    "id": 51, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, renomme l'entreprise avec le pire nom possible.",
+    "id": 51, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, renomme l'entreprise avec le pire nom possible.",
     "instructions": "Plus c’est catastrophique, mieux c’est.",
     "vote_label": "Le nom est-il vraiment catastrophique ?"
 },
 {
-    "id": 52, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, écris une réponse passive-agressive à un mail professionnel.",
+    "id": 52, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, écris une réponse passive-agressive à un mail professionnel.",
     "instructions": "Le passif-agressif doit être subtil mais violent.",
     "vote_label": "La réponse est-elle suffisamment passive-agressive ?"
 },
 {
-    "id": 53, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, invente une réunion totalement inutile.",
+    "id": 53, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, invente une réunion totalement inutile.",
     "instructions": "Une réunion qui pourrait être un mail, mais en pire.",
     "vote_label": "La réunion est-elle inutile au possible ?"
 },
 {
-    "id": 54, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, résume ton travail en utilisant uniquement des emojis.",
+    "id": 54, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, résume ton travail en utilisant uniquement des emojis.",
     "instructions": "On veut un résumé clair… ou pas.",
     "vote_label": "Les emojis résument-ils vraiment ton travail ?"
 },
 {
-    "id": 55, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, crée un KPI complètement absurde.",
+    "id": 55, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, crée un KPI complètement absurde.",
     "instructions": "Un indicateur qui ne sert à rien mais qui fait sérieux.",
     "vote_label": "Le KPI est-il suffisamment absurde ?"
 },
 {
-    "id": 56, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, vends un objet banal comme une innovation révolutionnaire.",
+    "id": 56, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, vends un objet banal comme une innovation révolutionnaire.",
     "instructions": "Transforme un trombone en révolution technologique.",
     "vote_label": "La vente est-elle convaincante ?"
 },
 {
-    "id": 57, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, écris un message Teams qui aurait pu être un email.",
+    "id": 57, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, écris un message Teams qui aurait pu être un email.",
     "instructions": "Le message doit être inutilement long.",
     "vote_label": "Le message aurait-il dû être un email ?"
 },
 {
-    "id": 58, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, invente une startup qui ne résout aucun problème.",
+    "id": 58, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, invente une startup qui ne résout aucun problème.",
     "instructions": "Une startup inutile mais financée à 10M€.",
     "vote_label": "La startup est-elle inutile ?"
 },
 {
-    "id": 59, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, décris un collègue imaginaire insupportable.",
+    "id": 59, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, décris un collègue imaginaire insupportable.",
     "instructions": "On veut du réalisme… trop réaliste.",
     "vote_label": "Le collègue est-il vraiment insupportable ?"
 },
 {
-    "id": 60, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, trouve 5 buzzwords à placer dans une réunion.",
+    "id": 60, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, trouve 5 buzzwords à placer dans une réunion.",
     "instructions": "Plus c’est vide de sens, mieux c’est.",
     "vote_label": "Les buzzwords sont-ils dignes de Corpo! ?"
 },
 {
-    "id": 61, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, écris le pire commentaire LinkedIn possible.",
+    "id": 61, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, écris le pire commentaire LinkedIn possible.",
     "instructions": "Cringe, corporate, et inutile.",
     "vote_label": "Le commentaire est-il catastrophique ?"
 },
 {
-    "id": 62, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, invente une fonctionnalité inutile pour une application connue.",
+    "id": 62, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, invente une fonctionnalité inutile pour une application connue.",
     "instructions": "Plus c’est inutile, mieux c’est.",
     "vote_label": "La fonctionnalité est-elle inutile ?"
 },
 {
-    "id": 63, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, rédige un avis Glassdoor hilarant sur ton entreprise imaginaire.",
+    "id": 63, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, rédige un avis Glassdoor hilarant sur ton entreprise imaginaire.",
     "instructions": "On veut du sarcasme et du vécu.",
     "vote_label": "L’avis est-il hilarant ?"
 },
 {
-    "id": 64, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, explique pourquoi la pause café est essentielle à la productivité.",
+    "id": 64, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, explique pourquoi la pause café est essentielle à la productivité.",
     "instructions": "Argumente comme si ta carrière en dépendait.",
     "vote_label": "L’argumentation est-elle convaincante ?"
 },
 {
-    "id": 65, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, écris un mail automatique totalement honnête.",
+    "id": 65, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, écris un mail automatique totalement honnête.",
     "instructions": "Pas de filtre, pas de corporate.",
     "vote_label": "Le mail est-il honnête (trop honnête) ?"
 },
 {
-    "id": 66, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, trouve 5 synonymes corporate du mot 'problème'.",
+    "id": 66, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, trouve 5 synonymes corporate du mot 'problème'.",
     "instructions": "On veut du damage control.",
     "vote_label": "Les synonymes sont-ils corporate ?"
 },
 {
-    "id": 67, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, invente une excuse pour ne pas avoir lu un document.",
+    "id": 67, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, invente une excuse pour ne pas avoir lu un document.",
     "instructions": "Plus c’est plausible, mieux c’est.",
     "vote_label": "L’excuse est-elle crédible ?"
 },
 {
-    "id": 68, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, écris la bio LinkedIn la plus prétentieuse possible.",
+    "id": 68, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, écris la bio LinkedIn la plus prétentieuse possible.",
     "instructions": "On veut du leadership, du mindset, du bullshit.",
     "vote_label": "La bio est-elle suffisamment prétentieuse ?"
 },
 {
-    "id": 69, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, crée une devise d'entreprise catastrophique.",
+    "id": 69, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, crée une devise d'entreprise catastrophique.",
     "instructions": "Une devise qui ferait fuir n’importe quel candidat.",
     "vote_label": "La devise est-elle catastrophique ?"
 },
 {
-    "id": 70, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, transforme une tâche banale en exploit extraordinaire.",
+    "id": 70, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, transforme une tâche banale en exploit extraordinaire.",
     "instructions": "Fais passer un mail envoyé pour un exploit héroïque.",
     "vote_label": "L’exploit est-il convaincant ?"
 },
 {
-    "id": 71, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, trouve le maximum d'acronymes professionnels inventés.",
+    "id": 71, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, trouve le maximum d'acronymes professionnels inventés.",
     "instructions": "Plus c’est incompréhensible, mieux c’est.",
     "vote_label": "Les acronymes sont-ils crédibles ?"
 },
 {
-    "id": 72, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, écris un message de félicitations exagérément enthousiaste.",
+    "id": 72, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, écris un message de félicitations exagérément enthousiaste.",
     "instructions": "On veut du corporate cringe.",
     "vote_label": "Le message est-il trop enthousiaste ?"
 },
 {
-    "id": 73, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, invente un projet qui coûterait des millions pour rien.",
+    "id": 73, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, invente un projet qui coûterait des millions pour rien.",
     "instructions": "Plus c’est inutile, mieux c’est.",
     "vote_label": "Le projet est-il un gouffre financier ?"
 },
 {
-    "id": 74, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, écris un mail contenant le plus de jargon corporate possible.",
+    "id": 74, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, écris un mail contenant le plus de jargon corporate possible.",
     "instructions": "Synergies, roadmap, quick wins… lâche-toi.",
     "vote_label": "Le jargon est-il insupportable ?"
 },
 {
-    "id": 75, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, raconte une journée de travail comme une épopée héroïque.",
+    "id": 75, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, raconte une journée de travail comme une épopée héroïque.",
     "instructions": "Transforme ton quotidien en film hollywoodien.",
     "vote_label": "L’épopée est-elle héroïque ?"
 },
 {
-    "id": 76, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, trouve 5 raisons absurdes de demander une augmentation.",
+    "id": 76, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, trouve 5 raisons absurdes de demander une augmentation.",
     "instructions": "Plus c’est absurde, mieux c’est.",
     "vote_label": "Les raisons sont-elles absurdes ?"
 },
 {
-    "id": 77, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, crée le profil Tinder d'un manager.",
+    "id": 77, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, crée le profil Tinder d'un manager.",
     "instructions": "On veut du cringe professionnel.",
     "vote_label": "Le profil est-il hilarant ?"
 },
 {
-    "id": 78, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, rédige une annonce d'emploi remplie de red flags.",
+    "id": 78, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, rédige une annonce d'emploi remplie de red flags.",
     "instructions": "Plus c’est toxique, mieux c’est.",
     "vote_label": "L’annonce est-elle un nid à red flags ?"
 },
 {
-    "id": 79, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, invente une règle de bureau complètement ridicule.",
+    "id": 79, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, invente une règle de bureau complètement ridicule.",
     "instructions": "Une règle que personne ne respecterait.",
     "vote_label": "La règle est-elle ridicule ?"
 },
 {
-    "id": 80, "type": "vote", "timer": 40, "duo": False,
-    "text": "En 40 secondes, explique pourquoi tu mérites le poste de PDG.",
+    "id": 80, "type": "vote", "timer": 45, "duo": False,
+    "text": "En 45 secondes, explique pourquoi tu mérites le poste de PDG.",
     "instructions": "Convaincs-nous que tu es la meilleure option (ou la pire).",
     "vote_label": "Mérite-t-il/elle d’être PDG ?"
 }

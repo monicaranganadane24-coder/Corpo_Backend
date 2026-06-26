@@ -27,7 +27,7 @@ class Party(Base):
     # 🎯 Système de file d'attente pour les défis (Gestion du "un par un" et des ex-æquo)
     last_eliminated_id = Column(Integer, nullable=True)  # ID du joueur actuellement "sur la sellette" pour son défi
     
-    defi_sub_phase = Column(String(40), nullable=True)
+    defi_sub_phase = Column(String(45), nullable=True)
     # Valeurs possibles : 
     # "decision" (10s pour choisir d'utiliser sa carte Corpo), 
     # "running" (15s pour faire le défi), 
