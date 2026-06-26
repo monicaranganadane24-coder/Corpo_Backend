@@ -90,14 +90,14 @@ async def _auto_advance(code: str, expected_turn: int):
                 if alive_players:
                     import random
                     random_victim = random.choice(alive_players)
-                    # Reset d'abord toutes les victimes managers
                     db.query(Player).filter(Player.party_id == party.id).update(
-                        {"victim_of_managers": False}
+                    {"victim_of_managers": False}
                     )
                     random_victim.victim_of_managers = True
                     db.commit()
                     print(f"🎲 Licenciement random → {random_victim.pseudo}")
                     await broadcast(code, f"manager_timeout_random:{random_victim.pseudo}")
+                    await asyncio.sleep(2)  # 🔥 laisser le temps d'afficher le message
 
         await next_turn(code, party, db)
     finally:
@@ -270,7 +270,7 @@ async def _end_meeting_async(code: str, party_id: int):
                 player_first.is_alive = False
                 db.commit()
             await broadcast(code, f"player_eliminated_direct:{first['pseudo']}:{first['role']}")
-            await asyncio.sleep(2)
+            await asyncio.sleep(5)
 
             # 🔥 FIX : si Abdel éliminé directement → traiter les infectés
             if first["role"] == "Abdel":
