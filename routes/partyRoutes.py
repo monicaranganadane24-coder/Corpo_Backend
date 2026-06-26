@@ -539,6 +539,10 @@ class CreatePartyRequest(BaseModel):
     pseudo: str
     name: Optional[str] = None
     is_private: bool = False
+    
+class JoinByNameRequest(BaseModel):
+    pseudo: str
+    name: str
 
 class JoinPartyRequest(BaseModel):
     pseudo: str
@@ -554,7 +558,28 @@ class DefiVoteRequest(BaseModel):
     party_code: str
     success: bool  # True = réussi, False = échoué
 
+@router.post("/join_by_name")
+def join_by_name(request: JoinByNameRequest, db: Session = Depends(get_db)):
+    player = db.query(Player).filter(Player.pseudo == request.pseudo).first()
+    if not player:
+        raise HTTPException(404, "Pseudo introuvable")
 
+    party = db.query(Party).filter(
+        Party.name == request.name,
+        Party.status == "waiting"
+    ).first()
+    if not party:
+        raise HTTPException(404, "Aucun meeting avec ce nom trouvé")
+
+    player.party_id = party.id
+    db.commit()
+
+    return {
+        "message":  "Joueur ajouté",
+        "party_id": party.id,
+        "code":     party.code,
+        "player_id": player.id
+    }
 # ---------------------------------------------------------
 # CRÉATION DE PARTIE
 # ---------------------------------------------------------
@@ -565,6 +590,14 @@ def create_party(request: CreatePartyRequest, db: Session = Depends(get_db)):
     player = db.query(Player).filter(Player.pseudo == request.pseudo).first()
     if not player:
         raise HTTPException(404, "Pseudo introuvable")
+
+    # 🔒 Vérifier si le nom est déjà utilisé pour une partie en attente
+    existing_name = db.query(Party).filter(
+        Party.name == request.name,
+        Party.status == "waiting"
+    ).first()
+    if existing_name:
+        raise HTTPException(400, "Ce nom de meeting est déjà utilisé !")
 
     player.party_id = None
     db.commit()
@@ -595,6 +628,7 @@ def create_party(request: CreatePartyRequest, db: Session = Depends(get_db)):
         "is_private": request.is_private,
         "player_id": player.id
     }
+
 # ---------------------------------------------------------
 # REJOINDRE UNE PARTIE
 # ---------------------------------------------------------
