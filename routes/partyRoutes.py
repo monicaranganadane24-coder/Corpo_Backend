@@ -642,6 +642,15 @@ def join_party(request: JoinPartyRequest, db: Session = Depends(get_db)):
     if not party:
         raise HTTPException(404, "Code invalide")
 
+    # Déjà dans cette partie → retourner directement
+    if player.party_id == party.id:
+        return {
+            "message": "Déjà dans la partie",
+            "party_id": party.id,
+            "code": party.code,
+            "player_id": player.id
+        }
+
     if party.status != "waiting":
         raise HTTPException(400, "Cette partie a déjà commencé")
 
