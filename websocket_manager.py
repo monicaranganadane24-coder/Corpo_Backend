@@ -54,54 +54,7 @@ async def notify_party_start(code: str):
     await broadcast(code, "start")
 
 
-def schedule_turn_timer(code: str, expected_turn: int):
-    if code in turn_timers and not turn_timers[code].done():
-        turn_timers[code].cancel()
-    task = asyncio.create_task(_auto_advance(code, expected_turn))
-    turn_timers[code] = task
 
-
-async def _auto_advance(code: str, expected_turn: int):
-    await asyncio.sleep(TURN_TIMEOUT)
-    db = SessionLocal()
-    try:
-        party = db.query(Party).filter(Party.code == code).first()
-        if not party or party.meeting_phase != "meeting":
-            return
-        if party.current_turn != expected_turn:
-            return
-
-        print(f"⏱️ Timeout tour {expected_turn} room {code} → forçage")
-
-        # Vérifier si c'est le tour de Fabien (Manager) qui n'a pas choisi de victime
-        turn_order = json.loads(party.turn_order or "[]")
-        if expected_turn < len(turn_order):
-            current_player = db.query(Player).filter(
-                Player.id == turn_order[expected_turn]
-            ).first()
-
-            if current_player and current_player.is_manager:
-                # Fabien n'a pas choisi → licenciement random (peut inclure lui-même)
-                alive_players = db.query(Player).filter(
-                    Player.party_id == party.id,
-                    Player.is_alive == True
-                ).all()
-
-                if alive_players:
-                    import random
-                    random_victim = random.choice(alive_players)
-                    db.query(Player).filter(Player.party_id == party.id).update(
-                    {"victim_of_managers": False}
-                    )
-                    random_victim.victim_of_managers = True
-                    db.commit()
-                    print(f"🎲 Licenciement random → {random_victim.pseudo}")
-                    await broadcast(code, f"manager_timeout_random:{random_victim.pseudo}")
-                    await asyncio.sleep(2)  # 🔥 laisser le temps d'afficher le message
-
-        await next_turn(code, party, db)
-    finally:
-        db.close()
 
 
 async def next_turn(code: str, party, db):
@@ -138,7 +91,8 @@ async def next_turn(code: str, party, db):
             info = "oui" if left_player.is_manager or right_player.is_manager else "non"
             await send_to_player(code, next_player.id, f"cindy_voisin:{info}")
 
-        schedule_turn_timer(code, next_index)
+        from routes.meetingRoutes import _schedule_turn_timer as _sched
+        _sched(code, next_index)
     else:
         print(f"🏢 Fin du meeting room {code}")
         _end_meeting(code, party, db)

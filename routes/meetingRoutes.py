@@ -25,11 +25,8 @@ ORDER_MEETING_2PLUS = [
 turn_timers = {}
 
 
+# APRÈS
 async def auto_advance_turn(code: str, expected_turn: int, delay: int = 25):
-    """
-    Attend `delay` secondes puis force le passage au tour suivant
-    si le current_turn n'a pas encore changé (le joueur n'a pas agi).
-    """
     await asyncio.sleep(delay)
 
     db = SessionLocal()
@@ -37,10 +34,37 @@ async def auto_advance_turn(code: str, expected_turn: int, delay: int = 25):
         party = db.query(Party).filter(Party.code == code).first()
         if not party or party.meeting_phase != "meeting":
             return
-        # Si le tour n'a pas encore avancé → forcer
-        if party.current_turn == expected_turn:
-            print(f"⏱️ Auto-avance forcée pour room {code} (tour {expected_turn})")
-            await next_turn(code, party, db)
+        if party.current_turn != expected_turn:
+            return
+
+        print(f"⏱️ Auto-avance forcée pour room {code} (tour {expected_turn})")
+
+        # Vérifier si c'est le tour de Fabien qui n'a pas choisi
+        turn_order = json.loads(party.turn_order or "[]")
+        if expected_turn < len(turn_order):
+            current_player = db.query(Player).filter(
+                Player.id == turn_order[expected_turn]
+            ).first()
+
+            if current_player and current_player.is_manager:
+                import random
+                alive_players = db.query(Player).filter(
+                    Player.party_id == party.id,
+                    Player.is_alive == True
+                ).all()
+
+                if alive_players:
+                    random_victim = random.choice(alive_players)
+                    db.query(Player).filter(Player.party_id == party.id).update(
+                        {"victim_of_managers": False}
+                    )
+                    random_victim.victim_of_managers = True
+                    db.commit()
+                    print(f"🎲 Licenciement random → {random_victim.pseudo}")
+                    await broadcast(code, f"manager_timeout_random:{random_victim.pseudo}")
+                    await asyncio.sleep(5)  # 5 secondes pour que tous voient le message
+
+        await next_turn(code, party, db)
     finally:
         db.close()
 
