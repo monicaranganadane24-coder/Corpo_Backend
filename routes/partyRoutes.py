@@ -8,12 +8,35 @@ from utils.generatePartyCode import generate_party_code
 from routes.meetingRoutes import start_meeting
 from websocket_manager import notify_party_start, broadcast
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 import asyncio
 import json
 
 router = APIRouter(prefix="/party", tags=["Party"])
+
+def cleanup_parties(db: Session):
+    limit = datetime.utcnow() - timedelta(minutes=5)
+
+    parties = db.query(Party).all()
+
+    for party in parties:
+        players_count = db.query(Player).filter(
+            Player.party_id == party.id
+        ).count()
+
+        if players_count == 0:
+            db.delete(party)
+            continue
+
+        if party.last_activity and party.last_activity < limit:
+            db.query(Player).filter(
+                Player.party_id == party.id
+            ).update({"party_id": None})
+
+            db.delete(party)
+
+    db.commit()
 
 ALL_ROLES = [
     {
@@ -557,6 +580,8 @@ class DefiVoteRequest(BaseModel):
     voter_id: int
     party_code: str
     success: bool  # True = réussi, False = échoué
+    
+
 
 @router.post("/join_by_name")
 def join_by_name(request: JoinByNameRequest, db: Session = Depends(get_db)):
@@ -580,22 +605,37 @@ def join_by_name(request: JoinByNameRequest, db: Session = Depends(get_db)):
         "code":     party.code,
         "player_id": player.id
     }
+    
+
 # ---------------------------------------------------------
 # CRÉATION DE PARTIE
 # ---------------------------------------------------------
 @router.post("/create")
+@router.post("/create")
 def create_party(request: CreatePartyRequest, db: Session = Depends(get_db)):
+    cleanup_parties(db)
+
     print(f"🔍 DEBUG request.name = {repr(request.name)}")
-    
+
     player = db.query(Player).filter(Player.pseudo == request.pseudo).first()
     if not player:
         raise HTTPException(404, "Pseudo introuvable")
 
-    # 🔒 Vérifier si le nom est déjà utilisé pour une partie en attente
+    waiting_count = db.query(Party).filter(
+        Party.status == "waiting"
+    ).count()
+
+    if waiting_count >= 10:
+        raise HTTPException(
+            400,
+            "Il y a déjà trop de meetings ouverts. Réessaie dans quelques minutes."
+        )
+
     existing_name = db.query(Party).filter(
         Party.name == request.name,
         Party.status == "waiting"
     ).first()
+
     if existing_name:
         raise HTTPException(400, "Ce nom de meeting est déjà utilisé !")
 
@@ -603,14 +643,16 @@ def create_party(request: CreatePartyRequest, db: Session = Depends(get_db)):
     db.commit()
 
     code = generate_party_code()
+
     party = Party(
         code=code,
         host_id=player.id,
-        name=request.name, 
+        name=request.name,
         is_private=request.is_private,
         status="waiting",
         last_activity=datetime.utcnow()
     )
+
     db.add(party)
     db.commit()
     db.refresh(party)
@@ -619,6 +661,8 @@ def create_party(request: CreatePartyRequest, db: Session = Depends(get_db)):
 
     player.party_id = party.id
     player.last_seen = datetime.utcnow()
+    party.last_activity = datetime.utcnow()
+
     db.commit()
 
     return {
