@@ -107,7 +107,7 @@ async def next_turn(code: str, party, db):
         next_player = db.query(Player).filter(Player.id == turn_order[next_index]).first()
         print(f"➡️ Prochain tour : {next_player.role}")
         await broadcast(code, f"role:{next_player.role}")
-        # 🔥 Si c’est le tour de Cindy → envoyer l’info des voisins
+
         if next_player.role == "Cindy":
             players = db.query(Player).filter(Player.party_id == party.id, Player.is_alive == True).all()
             roles_present = {p.role: p for p in players}
@@ -120,6 +120,11 @@ async def next_turn(code: str, party, db):
             right_player = roles_present[right_role]
             info = "oui" if left_player.is_manager or right_player.is_manager else "non"
             await send_to_player(code, next_player.id, f"cindy_voisin:{info}")
+
+        # 🔥 Lancer le timer pour ce tour
+        from routes.meetingRoutes import _schedule_turn_timer as _sched
+        _sched(code, next_index)
+
     else:
         print(f"🏢 Fin du meeting room {code}")
         _end_meeting(code, party, db)
