@@ -53,7 +53,37 @@ async def disconnect(code: str, websocket):
 async def notify_party_start(code: str):
     await broadcast(code, "start")
 
-
+async def cleanup_inactive_parties():
+    """Supprime les parties inactives depuis plus de 5 minutes."""
+    while True:
+        await asyncio.sleep(60)  # vérifier toutes les minutes
+        db = SessionLocal()
+        try:
+            from datetime import datetime, timedelta
+            limite = datetime.utcnow() - timedelta(minutes=5)
+            
+            parties = db.query(Party).filter(Party.status == "waiting").all()
+            for party in parties:
+                # Supprimer si inactif depuis 5min ou aucun joueur
+                players = db.query(Player).filter(Player.party_id == party.id).all()
+                inactive = party.last_activity and party.last_activity < limite
+                empty    = len(players) == 0
+                
+                if inactive or empty:
+                    # Déconnecter les WS si encore connectés
+                    if party.code in connections:
+                        connections.pop(party.code, None)
+                    # Reset les joueurs
+                    for p in players:
+                        p.party_id = None
+                    db.delete(party)
+                    print(f"🗑️ Partie {party.code} supprimée (inactive/vide)")
+            
+            db.commit()
+        except Exception as e:
+            print(f"⚠️ Erreur cleanup : {e}")
+        finally:
+            db.close()
 
 
 

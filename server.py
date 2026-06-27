@@ -25,6 +25,11 @@ app.add_middleware(
 
 Base.metadata.create_all(bind=engine)
 
+@app.on_event("startup")
+async def startup_event():
+    from websocket_manager import cleanup_inactive_parties
+    asyncio.create_task(cleanup_inactive_parties())
+
 # Import des routes
 from routes.accountRoutes import router as account_router
 from routes import partyRoutes
