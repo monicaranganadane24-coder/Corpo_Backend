@@ -33,32 +33,39 @@ async def auto_advance_turn(code: str, expected_turn: int, delay: int = 25):
     try:
         party = db.query(Party).filter(Party.code == code).first()
         if not party or party.meeting_phase != "meeting":
+            print(f"🔍 DEBUG abort: party={party is not None} phase={party.meeting_phase if party else 'N/A'}")
             return
         if party.current_turn != expected_turn:
+            print(f"🔍 DEBUG abort: current_turn={party.current_turn} != expected={expected_turn}")
             return
 
         print(f"⏱️ Auto-avance forcée pour room {code} (tour {expected_turn})")
 
-        # Vérifier si c'est le tour de Fabien (Manager) sans victime choisie
         turn_order = json.loads(party.turn_order or "[]")
+        print(f"🔍 DEBUG turn_order={turn_order} expected_turn={expected_turn}")
+
         if expected_turn < len(turn_order):
             current_player = db.query(Player).filter(
                 Player.id == turn_order[expected_turn]
             ).first()
 
+            print(f"🔍 DEBUG current_player={current_player.pseudo if current_player else None} is_manager={current_player.is_manager if current_player else None}")
+
             if current_player and current_player.is_manager:
-                # Vérifier si Fabien n'a PAS désigné de victime
                 victime_choisie = db.query(Player).filter(
                     Player.party_id == party.id,
                     Player.victim_of_managers == True
                 ).first()
 
+                print(f"🔍 DEBUG victime_choisie={victime_choisie.pseudo if victime_choisie else None}")
+
                 if not victime_choisie:
-                    # Licenciement random parmi TOUS les vivants (Fabien inclus)
                     alive_players = db.query(Player).filter(
                         Player.party_id == party.id,
                         Player.is_alive == True
                     ).all()
+
+                    print(f"🔍 DEBUG alive_players={[p.pseudo for p in alive_players]}")
 
                     if alive_players:
                         random_victim = random.choice(alive_players)

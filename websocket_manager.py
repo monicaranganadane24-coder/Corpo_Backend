@@ -90,9 +90,6 @@ async def next_turn(code: str, party, db):
             right_player = roles_present[right_role]
             info = "oui" if left_player.is_manager or right_player.is_manager else "non"
             await send_to_player(code, next_player.id, f"cindy_voisin:{info}")
-
-        from routes.meetingRoutes import _schedule_turn_timer as _sched
-        _sched(code, next_index)
     else:
         print(f"🏢 Fin du meeting room {code}")
         _end_meeting(code, party, db)
