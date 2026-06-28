@@ -55,7 +55,9 @@ async def cleanup_loop():
                 if empty or inactive:
                     for p in players:
                         p.party_id = None
+                    db.flush()
                     db.delete(party)
+                    db.flush()
                     print(f"🗑️ Partie {party.code} supprimée (vide={empty} inactive={inactive})")
 
             db.commit()

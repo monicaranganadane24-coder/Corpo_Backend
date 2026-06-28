@@ -44,5 +44,5 @@ class Party(Base):
     players = relationship(
         "Player",
         back_populates="party",
-        cascade="all, delete-orphan"
+        cascade="save-update, merge"
     )

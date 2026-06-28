@@ -773,7 +773,6 @@ def get_players(party_id: int, db: Session = Depends(get_db)):
 # ---------------------------------------------------------
 @router.get("/public")
 def get_public_parties(db: Session = Depends(get_db)):
-    limite_joueur = datetime.utcnow() - timedelta(seconds=30)
     limite_inactivite = datetime.utcnow() - timedelta(minutes=5)
 
     parties = db.query(Party).filter(
@@ -785,33 +784,33 @@ def get_public_parties(db: Session = Depends(get_db)):
 
     for p in parties:
         players = db.query(Player).filter(Player.party_id == p.id).all()
+        players_count = len(players)
 
-        active_players = [
-            j for j in players
-            if j.last_seen and j.last_seen > limite_joueur
-        ]
+        # Partie vide ou inactive depuis 5 min
+        if players_count == 0 or (p.last_activity and p.last_activity < limite_inactivite):
 
-        empty = len(players) == 0
-        no_active_players = len(active_players) == 0
-        inactive = p.last_activity and p.last_activity < limite_inactivite
+            # 1. Détacher les joueurs de la partie
+            for player in players:
+                player.party_id = None
 
-        if empty or no_active_players or inactive:
-            for j in players:
-                j.party_id = None
+            db.flush()
 
+            # 2. Supprimer la partie
             db.delete(p)
+            db.flush()
+
             continue
 
         result.append({
             "party_id": p.id,
             "code": p.code,
             "host_id": p.host_id,
-            "name": p.name
+            "name": p.name,
+            "players_count": players_count
         })
 
     db.commit()
     return result
-
 # ---------------------------------------------------------
 # RÔLE D'UN JOUEUR
 # ---------------------------------------------------------
