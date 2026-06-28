@@ -46,7 +46,7 @@ async def cleanup_loop():
                 # Joueurs actifs = ceux qui ont envoyé un heartbeat récemment
                 active_players = [
                     p for p in players
-                    if p.last_seen and p.last_seen > limite_joueur
+                    if p.last_seen is None or p.last_seen > limite_joueur
                 ]
 
                 empty = len(active_players) == 0
