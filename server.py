@@ -31,22 +31,33 @@ async def startup_event():
 
 async def cleanup_loop():
     while True:
-        await asyncio.sleep(60)
+        await asyncio.sleep(30)  # vérifier toutes les 30 secondes
         db = SessionLocal()
         try:
-            limite = datetime.utcnow() - timedelta(minutes=5)
+            limite_inactivite = datetime.utcnow() - timedelta(minutes=2)
+            limite_joueur = datetime.utcnow() - timedelta(seconds=30)
+
             parties = db.query(Party).filter(Party.status == "waiting").all()
             for party in parties:
                 players = db.query(Player).filter(
                     Player.party_id == party.id
                 ).all()
-                inactive = party.last_activity and party.last_activity < limite
-                empty    = len(players) == 0
-                if inactive or empty:
+
+                # Joueurs actifs = ceux qui ont envoyé un heartbeat récemment
+                active_players = [
+                    p for p in players
+                    if p.last_seen and p.last_seen > limite_joueur
+                ]
+
+                empty = len(active_players) == 0
+                inactive = party.last_activity and party.last_activity < limite_inactivite
+
+                if empty or inactive:
                     for p in players:
                         p.party_id = None
                     db.delete(party)
-                    print(f"🗑️ Partie {party.code} supprimée")
+                    print(f"🗑️ Partie {party.code} supprimée (vide={empty} inactive={inactive})")
+
             db.commit()
         except Exception as e:
             print(f"⚠️ Erreur cleanup : {e}")
