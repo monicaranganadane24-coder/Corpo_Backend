@@ -597,6 +597,8 @@ def join_by_name(request: JoinByNameRequest, db: Session = Depends(get_db)):
         raise HTTPException(404, "Aucun meeting avec ce nom trouvé")
 
     player.party_id = party.id
+    player.last_seen = datetime.utcnow()
+    party.last_activity = datetime.utcnow()
     db.commit()
 
     return {
@@ -771,8 +773,8 @@ def get_players(party_id: int, db: Session = Depends(get_db)):
 # ---------------------------------------------------------
 @router.get("/public")
 def get_public_parties(db: Session = Depends(get_db)):
-    from datetime import datetime, timedelta
     limite_joueur = datetime.utcnow() - timedelta(seconds=30)
+    limite_inactivite = datetime.utcnow() - timedelta(minutes=5)
 
     parties = db.query(Party).filter(
         Party.is_private == False,
@@ -780,33 +782,34 @@ def get_public_parties(db: Session = Depends(get_db)):
     ).all()
 
     result = []
-    to_delete = []
 
     for p in parties:
-        # Joueurs actifs = last_seen récent OU last_seen null (vient de rejoindre)
         players = db.query(Player).filter(Player.party_id == p.id).all()
-        active = [j for j in players if j.last_seen is None or j.last_seen > limite_joueur]
 
-        if len(active) == 0:
-            # Aucun joueur actif → supprimer la partie
-            to_delete.append(p)
-        else:
-            result.append({
-                "party_id": p.id,
-                "code": p.code,
-                "host_id": p.host_id,
-                "name": p.name
-            })
+        active_players = [
+            j for j in players
+            if j.last_seen and j.last_seen > limite_joueur
+        ]
 
-    # Supprimer les parties vides
-    for p in to_delete:
-        players = db.query(Player).filter(Player.party_id == p.id).all()
-        for j in players:
-            j.party_id = None
-        db.delete(p)
-    if to_delete:
-        db.commit()
+        empty = len(players) == 0
+        no_active_players = len(active_players) == 0
+        inactive = p.last_activity and p.last_activity < limite_inactivite
 
+        if empty or no_active_players or inactive:
+            for j in players:
+                j.party_id = None
+
+            db.delete(p)
+            continue
+
+        result.append({
+            "party_id": p.id,
+            "code": p.code,
+            "host_id": p.host_id,
+            "name": p.name
+        })
+
+    db.commit()
     return result
 
 # ---------------------------------------------------------
