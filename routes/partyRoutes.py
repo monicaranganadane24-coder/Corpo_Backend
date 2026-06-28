@@ -771,11 +771,24 @@ def get_players(party_id: int, db: Session = Depends(get_db)):
 # ---------------------------------------------------------
 @router.get("/public")
 def get_public_parties(db: Session = Depends(get_db)):
+    from datetime import datetime, timedelta
+    limite_joueur = datetime.utcnow() - timedelta(seconds=30)
+
     parties = db.query(Party).filter(
         Party.is_private == False,
         Party.status == "waiting"
     ).all()
-    return [{"party_id": p.id, "code": p.code, "host_id": p.host_id, "name": p.name} for p in parties]
+
+    result = []
+    for p in parties:
+        active_players = db.query(Player).filter(
+            Player.party_id == p.id,
+            Player.last_seen > limite_joueur
+        ).count()
+        if active_players > 0:
+            result.append({"party_id": p.id, "code": p.code, "host_id": p.host_id, "name": p.name})
+
+    return result
 
 # ---------------------------------------------------------
 # RÔLE D'UN JOUEUR

@@ -76,7 +76,7 @@ async def auto_advance_turn(code: str, expected_turn: int, delay: int = 25):
                         db.commit()
                         print(f"🎲 Fabien trop lent → licenciement random : {random_victim.pseudo}")
                         await broadcast(code, f"manager_timeout_random:{random_victim.pseudo}")
-                        await asyncio.sleep(5)  # 🔥 laisser 5s aux joueurs pour voir le message
+                        await asyncio.sleep(3)  # 🔥 laisser 3s aux joueurs pour voir le message
 
         await next_turn(code, party, db)
     finally:
