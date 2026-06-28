@@ -613,26 +613,23 @@ def join_by_name(request: JoinByNameRequest, db: Session = Depends(get_db)):
 # CRÉATION DE PARTIE
 # ---------------------------------------------------------
 @router.post("/create")
-@router.post("/create")
 def create_party(request: CreatePartyRequest, db: Session = Depends(get_db)):
-    cleanup_parties(db)
-
-    print(f"🔍 DEBUG request.name = {repr(request.name)}")
-
     player = db.query(Player).filter(Player.pseudo == request.pseudo).first()
     if not player:
         raise HTTPException(404, "Pseudo introuvable")
 
-    waiting_count = db.query(Party).filter(
+    # 🔒 Maximum 10 parties simultanées
+    waiting_parties = db.query(Party).filter(
         Party.status == "waiting"
     ).count()
 
-    if waiting_count >= 10:
+    if waiting_parties >= 10:
         raise HTTPException(
-            400,
-            "Il y a déjà trop de meetings ouverts. Réessaie dans quelques minutes."
+            status_code=400,
+            detail="Le nombre maximum de meetings simultanés (10) est atteint. Réessayez dans quelques instants."
         )
 
+    # 🔒 Nom déjà utilisé
     existing_name = db.query(Party).filter(
         Party.name == request.name,
         Party.status == "waiting"
@@ -773,7 +770,9 @@ def get_players(party_id: int, db: Session = Depends(get_db)):
 # ---------------------------------------------------------
 @router.get("/public")
 def get_public_parties(db: Session = Depends(get_db)):
-    limite_inactivite = datetime.utcnow() - timedelta(minutes=2)
+    now = datetime.utcnow()
+    limite_joueur = now - timedelta(seconds=60)
+    limite_partie = now - timedelta(minutes=2)
 
     parties = db.query(Party).filter(
         Party.is_private == False,
@@ -782,35 +781,38 @@ def get_public_parties(db: Session = Depends(get_db)):
 
     result = []
 
-    for p in parties:
-        players = db.query(Player).filter(Player.party_id == p.id).all()
-        players_count = len(players)
+    for party in parties:
+        players = db.query(Player).filter(Player.party_id == party.id).all()
 
-        # Partie vide ou inactive depuis 2 min
-        if players_count == 0 or (p.last_activity and p.last_activity < limite_inactivite):
+        active_players = [
+            p for p in players
+            if p.last_seen and p.last_seen > limite_joueur
+        ]
 
-            # 1. Détacher les joueurs de la partie
+        should_delete = (
+            len(active_players) == 0
+            or (party.last_activity and party.last_activity < limite_partie)
+        )
+
+        if should_delete:
             for player in players:
                 player.party_id = None
 
-            db.flush()
-
-            # 2. Supprimer la partie
-            db.delete(p)
-            db.flush()
-
+            db.delete(party)
+            db.commit()
             continue
 
         result.append({
-            "party_id": p.id,
-            "code": p.code,
-            "host_id": p.host_id,
-            "name": p.name,
-            "players_count": players_count
+            "party_id": party.id,
+            "code": party.code,
+            "host_id": party.host_id,
+            "name": party.name,
+            "players_count": len(active_players)
         })
 
-    db.commit()
     return result
+
+
 # ---------------------------------------------------------
 # RÔLE D'UN JOUEUR
 # ---------------------------------------------------------
