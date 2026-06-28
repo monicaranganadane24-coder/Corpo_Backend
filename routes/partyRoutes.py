@@ -780,13 +780,32 @@ def get_public_parties(db: Session = Depends(get_db)):
     ).all()
 
     result = []
+    to_delete = []
+
     for p in parties:
-        active_players = db.query(Player).filter(
-            Player.party_id == p.id,
-            Player.last_seen > limite_joueur
-        ).count()
-        if active_players > 0:
-            result.append({"party_id": p.id, "code": p.code, "host_id": p.host_id, "name": p.name})
+        # Joueurs actifs = last_seen récent OU last_seen null (vient de rejoindre)
+        players = db.query(Player).filter(Player.party_id == p.id).all()
+        active = [j for j in players if j.last_seen is None or j.last_seen > limite_joueur]
+
+        if len(active) == 0:
+            # Aucun joueur actif → supprimer la partie
+            to_delete.append(p)
+        else:
+            result.append({
+                "party_id": p.id,
+                "code": p.code,
+                "host_id": p.host_id,
+                "name": p.name
+            })
+
+    # Supprimer les parties vides
+    for p in to_delete:
+        players = db.query(Player).filter(Player.party_id == p.id).all()
+        for j in players:
+            j.party_id = None
+        db.delete(p)
+    if to_delete:
+        db.commit()
 
     return result
 
