@@ -31,7 +31,7 @@ async def startup_event():
 
 async def cleanup_loop():
     while True:
-        await asyncio.sleep(30)  # vérifier toutes les 30 secondes
+        await asyncio.sleep(60)  # vérifier toutes les 60 secondes
         db = SessionLocal()
         try:
             limite_inactivite = datetime.utcnow() - timedelta(minutes=2)
