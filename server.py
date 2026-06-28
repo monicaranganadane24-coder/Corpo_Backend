@@ -27,8 +27,31 @@ Base.metadata.create_all(bind=engine)
 
 @app.on_event("startup")
 async def startup_event():
-    from websocket_manager import cleanup_inactive_parties
-    asyncio.create_task(cleanup_inactive_parties())
+    asyncio.create_task(cleanup_loop())
+
+async def cleanup_loop():
+    while True:
+        await asyncio.sleep(60)
+        db = SessionLocal()
+        try:
+            limite = datetime.utcnow() - timedelta(minutes=5)
+            parties = db.query(Party).filter(Party.status == "waiting").all()
+            for party in parties:
+                players = db.query(Player).filter(
+                    Player.party_id == party.id
+                ).all()
+                inactive = party.last_activity and party.last_activity < limite
+                empty    = len(players) == 0
+                if inactive or empty:
+                    for p in players:
+                        p.party_id = None
+                    db.delete(party)
+                    print(f"🗑️ Partie {party.code} supprimée")
+            db.commit()
+        except Exception as e:
+            print(f"⚠️ Erreur cleanup : {e}")
+        finally:
+            db.close()
 
 # Import des routes
 from routes.accountRoutes import router as account_router

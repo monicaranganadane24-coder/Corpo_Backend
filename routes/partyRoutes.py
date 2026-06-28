@@ -719,8 +719,21 @@ def leave_party(player_id: int, db: Session = Depends(get_db)):
     player = db.query(Player).filter(Player.id == player_id).first()
     if not player:
         raise HTTPException(404, "Joueur introuvable")
+    
+    party_id = player.party_id
     player.party_id = None
     db.commit()
+
+    # 🔥 Supprimer la partie si plus personne dedans
+    if party_id:
+        remaining = db.query(Player).filter(Player.party_id == party_id).count()
+        if remaining == 0:
+            party = db.query(Party).filter(Party.id == party_id).first()
+            if party and party.status == "waiting":
+                db.delete(party)
+                db.commit()
+                print(f"🗑️ Partie supprimée car vide")
+
     return {"message": "Tu as quitté la partie."}
 
 
